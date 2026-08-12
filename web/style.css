@@ -32,12 +32,22 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   line-height: 1.6;
 }
-header, nav, main, footer { max-width: var(--maxw); margin-inline: auto; }
+header, main, footer { max-width: var(--maxw); margin-inline: auto; }
 
-/* ---- header ---- */
-header { padding: 36px 0 6px; text-align: center; }
-header h1 { margin: 0; font-size: 1.9rem; letter-spacing: -.02em; }
-header .sub { color: var(--muted); margin: .4rem 0 .9rem; }
+/* ---- header (brand 左 / status + tabs 右) ---- */
+header {
+  display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: space-between; gap: 12px 20px;
+  padding: 22px 0 18px; margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.brand { min-width: 0; }
+.brand h1 { margin: 0; font-size: 1.55rem; letter-spacing: -.02em; }
+.brand .sub { color: var(--muted); margin: .25rem 0 0; font-size: .88rem; }
+.headtools {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-left: auto;
+}
 
 .status {
   display: inline-flex; align-items: center; gap: .45em;
@@ -59,7 +69,7 @@ header .sub { color: var(--muted); margin: .4rem 0 .9rem; }
 /* ---- tabs (segmented control) ---- */
 nav.tabs {
   display: flex; gap: 4px; padding: 5px; width: max-content; max-width: 100%;
-  margin: 22px auto 20px; overflow-x: auto;
+  margin: 0; overflow-x: auto;
   background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px;
 }
 nav.tabs button {

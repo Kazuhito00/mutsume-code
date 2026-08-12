@@ -8,16 +8,19 @@
 </head>
 <body>
 <header>
-  <h1>mutsume-code</h1>
-  <p class="sub">六角格子の 2 次元コード。生成・読み取りをすべてブラウザ内 (Pyodide / WASM) で実行します。</p>
-  <div id="status" class="status booting">初期化中…</div>
+  <div class="brand">
+    <h1>mutsume-code</h1>
+    <p class="sub">六角格子の 2 次元コード。すべてブラウザ内 (Pyodide / WASM) で実行。</p>
+  </div>
+  <div class="headtools">
+    <div id="status" class="status booting">初期化中…</div>
+    <nav class="tabs">
+      <button data-tab="encode" class="active">生成</button>
+      <button data-tab="image">画像から読み取り</button>
+      <button data-tab="camera">カメラで読み取り</button>
+    </nav>
+  </div>
 </header>
-
-<nav class="tabs">
-  <button data-tab="encode" class="active">生成</button>
-  <button data-tab="image">画像から読み取り</button>
-  <button data-tab="camera">カメラで読み取り</button>
-</nav>
 
 <main>
   <!-- 生成 -->
