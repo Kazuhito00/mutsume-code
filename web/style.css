@@ -113,13 +113,19 @@ input[type=color] {
   background: var(--panel-2); border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
+.row-colors { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; }
+label.inline { display: flex; flex-direction: row; align-items: center; gap: .5em; }
+label.inline input[type=color] { width: 48px; height: 2em; padding: 2px; }
 .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; }
 .hint { color: var(--muted); font-size: .82rem; margin: 0; font-weight: 500; }
 label.check {
   display: flex; align-items: center; gap: .5em;
   font-size: .9rem; font-weight: 500; color: var(--fg); cursor: pointer;
 }
-label.check input[type=checkbox] { width: auto; margin: 0; accent-color: var(--accent); }
+label.check input[type=checkbox] {
+  width: 1.15em; height: 1.15em; margin: 0; flex: none;
+  accent-color: var(--accent); cursor: pointer;
+}
 .warn {
   margin: 0; padding: .55em .8em; border-radius: var(--radius-sm);
   background: #fde2e2; color: #b23b3b; font-size: .85rem; font-weight: 600;
