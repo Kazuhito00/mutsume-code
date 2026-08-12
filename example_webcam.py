@@ -2,7 +2,7 @@
 
     venv\\Scripts\\python.exe example_webcam.py                 # カメラ 0 番
     venv\\Scripts\\python.exe example_webcam.py --camera 1
-    venv\\Scripts\\python.exe example_webcam.py --video sample.mp4
+    venv\\Scripts\\python.exe example_webcam.py --video path/to/movie.mp4
     venv\\Scripts\\python.exe example_webcam.py --image encode_basic.png
 
 前フレームで読めた位置を追従して高速化する (既定オン。--refresh で全探索の間隔を

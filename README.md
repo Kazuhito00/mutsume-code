@@ -89,7 +89,7 @@ mutsume.capacity(10, mode="numeric")  # -> 数字の桁数
 
 # カメラ / 動画 / 静止画で読むシンプルなデモ（要 opencv-python）
 .\venv\Scripts\python.exe example_webcam.py                     # カメラ 0 番
-.\venv\Scripts\python.exe example_webcam.py --video sample.mp4
+.\venv\Scripts\python.exe example_webcam.py --video path/to/movie.mp4
 .\venv\Scripts\python.exe example_webcam.py --image encode_basic.png
 ```
 
