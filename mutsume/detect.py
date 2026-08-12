@@ -1095,7 +1095,7 @@ def locate_image(source, radius_hint: int | None = None,
     """
     res = decode_image(source, radius_hint=radius_hint, profile=profile)
     if res.geometry is None:  # pragma: no cover - 復号成功時は必ず入る
-        raise MutsumeError("geometry unavailable")
+        raise MutsumeError("ジオメトリを取得できません")
     return res.geometry
 
 
@@ -1284,7 +1284,7 @@ def _decode_binarized(bz: Binarized, radius_hint: int | None,
     rep.candidates = len(cands)
     rep.finder_candidates = [(c.cx * inv, c.cy * inv) for c in cands]
     if len(cands) < 3:
-        raise MutsumeError(f"locator candidates not found (got {len(cands)})")
+        raise MutsumeError(f"ロケータ候補が見つかりません ({len(cands)} 個)")
 
     poses: list[_Pose] = []
     alignments: list[LocatorCandidate] = []
@@ -1330,8 +1330,8 @@ def _decode_binarized(bz: Binarized, radius_hint: int | None,
 
     if not poses:
         raise MutsumeError(
-            f"no pose candidate ({rep.candidates} locator candidates, "
-            f"{rep.triples} triples)")
+            f"姿勢候補がありません (ロケータ候補 {rep.candidates} 個, "
+            f"三つ組 {rep.triples} 個)")
 
     poses.sort(key=lambda p: -p.score)
     # 試行回数はプロファイルごとに持つ。micro はシグネチャもフォーマットもなく
@@ -1358,9 +1358,9 @@ def _decode_binarized(bz: Binarized, radius_hint: int | None,
             return res
 
     raise MutsumeError(
-        f"decode failed after {rep.attempts} attempts "
-        f"({rep.candidates} locator candidates, {rep.triples} triples, "
-        f"{len(poses)} pose candidates)"
+        f"{rep.attempts} 回試行しましたが復号できませんでした "
+        f"(ロケータ候補 {rep.candidates} 個, 三つ組 {rep.triples} 個, "
+        f"姿勢候補 {len(poses)} 個)"
     )
 
 

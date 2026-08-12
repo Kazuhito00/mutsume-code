@@ -118,14 +118,14 @@ def micro_parity(total_bytes: int) -> int:
     """micro の RS パリティ長。半径から一意に決まるので符号内に書かない。"""
     nsym = max(MICRO_MIN_PARITY, 2 * round(total_bytes * MICRO_RATIO / 2))
     if nsym + MICRO_OVERHEAD >= total_bytes:
-        raise MutsumeError("symbol too small for the micro format")
+        raise MutsumeError("micro フォーマットにはシンボルが小さすぎます")
     return nsym
 
 
 def micro_capacity(radius: int, mode: str = "byte") -> int:
     """micro で格納できる文字数 / バイト数。"""
     if mode not in MODE_BY_NAME:
-        raise MutsumeError(f"unknown mode: {mode}")
+        raise MutsumeError(f"不明なモード: {mode}")
     total = len(get_layout(radius, "micro").data_cells) // 8
     # ビットストリームに使えるのは (データ符号語 - CRC 2B)。
     # そこからヘッダ (モード 2bit + 個数 6bit) を引く。
@@ -144,7 +144,7 @@ def _build_micro_body(payload: bytes, k_total: int) -> bytes:
     mode = widest_mode(payload)
     if len(payload) > MICRO_MAX_COUNT:
         raise MutsumeError(
-            f"micro holds at most {MICRO_MAX_COUNT} units, got {len(payload)}")
+            f"micro に入るのは最大 {MICRO_MAX_COUNT} 単位です ({len(payload)} 単位)")
     w = BitWriter()
     w.write(MICRO_MODES.index(mode), MICRO_MODE_BITS)
     w.write(len(payload), MICRO_COUNT_BITS)
@@ -153,7 +153,7 @@ def _build_micro_body(payload: bytes, k_total: int) -> bytes:
     room = k_total - MICRO_CRC_LEN
     if len(stream) > room:
         raise MutsumeError(
-            f"payload does not fit in micro: need {len(stream)} <= {room} bytes")
+            f"micro に収まりません ({len(stream)} バイト必要, 上限 {room} バイト)")
     out = bytearray(stream)
     i = 0
     while len(out) < room:
@@ -165,20 +165,20 @@ def _build_micro_body(payload: bytes, k_total: int) -> bytes:
 
 def _parse_micro_body(body: bytes) -> tuple[bytes, list[tuple[str, int]]]:
     if len(body) <= MICRO_CRC_LEN:
-        raise MutsumeError("micro codeword too short")
+        raise MutsumeError("micro の符号語が短すぎます")
     head, want = body[:-MICRO_CRC_LEN], body[-MICRO_CRC_LEN:]
     if crc16(head) != int.from_bytes(want, "big"):
-        raise MutsumeError("CRC mismatch")
+        raise MutsumeError("CRC が一致しません")
     r = BitReader(head)
     idx = r.read(MICRO_MODE_BITS)
     if idx >= len(MICRO_MODES):
-        raise MutsumeError(f"unknown micro mode: {idx}")
+        raise MutsumeError(f"不明な micro モード: {idx}")
     mode = MICRO_MODES[idx]
     count = r.read(MICRO_COUNT_BITS)
     try:
         payload = read_segment_data(r, mode, count)
     except ValueError as e:
-        raise MutsumeError(f"micro segment decode failed: {e}") from e
+        raise MutsumeError(f"micro セグメントの復号に失敗しました: {e}") from e
     return payload, [(MODE_NAMES[mode], count)]
 
 
@@ -186,7 +186,7 @@ def parity_count(total_bytes: int, ecc: str) -> int:
     nsym = int(round(total_bytes * ECC_RATIO[ecc]))
     nsym = max(4, nsym - nsym % 2)  # 偶数にして t = nsym/2 を明確にする
     if nsym >= total_bytes:
-        raise MutsumeError("ECC level too high for this symbol size")
+        raise MutsumeError("このシンボルサイズには ECC レベルが高すぎます")
     return nsym
 
 
@@ -200,7 +200,7 @@ def block_plan(total: int, nsym_total: int) -> list[tuple[int, int]]:
     全体と揃うように、余りを先頭のブロックから 1 バイトずつ配る。
     """
     if nsym_total >= total:
-        raise MutsumeError("parity does not leave room for data")
+        raise MutsumeError("パリティが大きすぎてデータ領域が残りません")
     nblocks = max(1, -(-total // MAX_BLOCK))
     sizes = [total // nblocks + (1 if i < total % nblocks else 0)
              for i in range(nblocks)]
@@ -209,7 +209,7 @@ def block_plan(total: int, nsym_total: int) -> list[tuple[int, int]]:
     plan = []
     for size, par in zip(sizes, parities):
         if par >= size:
-            raise MutsumeError("block parity does not leave room for data")
+            raise MutsumeError("ブロックのパリティが大きすぎてデータ領域が残りません")
         plan.append((size - par, par))
     return plan
 
@@ -248,7 +248,7 @@ def _decode_blocks(stream: bytes, plan: list[tuple[int, int]],
                    erase_pos: Iterable[int] = ()) -> tuple[bytes, int]:
     order = interleave_order(plan)
     if len(stream) != len(order):
-        raise MutsumeError("codeword length does not match the block plan")
+        raise MutsumeError("符号語長がブロック構成と一致しません")
     blocks: list[list[int]] = [[0] * (k + s) for k, s in plan]
     erasures: list[list[int]] = [[] for _ in plan]
     for j, (b, i) in enumerate(order):
@@ -264,7 +264,7 @@ def _decode_blocks(stream: bytes, plan: list[tuple[int, int]],
         try:
             fixed, n = rs_decode(blocks[idx], s, erase_pos=erasures[idx] or None)
         except RSDecodeError as e:
-            raise MutsumeError(f"block {idx}: {e}") from e
+            raise MutsumeError(f"ブロック {idx}: {e}") from e
         body += fixed[:k]
         corrected += n
     return bytes(body), corrected
@@ -287,7 +287,7 @@ def payload_capacity(radius: int, ecc: str, mode: str = "byte",
                      palette: str = DEFAULT_PALETTE) -> int:
     """指定モード 1 セグメントで格納できるペイロードの文字数 / バイト数。"""
     if mode not in MODE_BY_NAME:
-        raise MutsumeError(f"unknown mode: {mode}")
+        raise MutsumeError(f"不明なモード: {mode}")
     if profile == "micro":
         # micro は ECC 固定・mono 固定
         return micro_capacity(radius, mode)
@@ -355,7 +355,7 @@ def _build_body(stream: bytes, k_total: int) -> bytes:
     body = bytes([SPEC_VERSION]) + len(stream).to_bytes(2, "big") + stream
     body += crc16(body).to_bytes(2, "big")
     if len(body) > k_total:
-        raise MutsumeError(f"payload does not fit: need {len(body)} <= {k_total} bytes")
+        raise MutsumeError(f"データが収まりません ({len(body)} バイト必要, 上限 {k_total} バイト)")
     i = 0
     out = bytearray(body)
     while len(out) < k_total:
@@ -366,17 +366,17 @@ def _build_body(stream: bytes, k_total: int) -> bytes:
 
 def _parse_body(body: bytes) -> bytes:
     if len(body) < OVERHEAD:
-        raise MutsumeError("codeword too short")
+        raise MutsumeError("符号語が短すぎます")
     if body[0] != SPEC_VERSION:
-        raise MutsumeError(f"unknown spec version: 0x{body[0]:02x}")
+        raise MutsumeError(f"不明な仕様バージョン: 0x{body[0]:02x}")
     length = int.from_bytes(body[1:3], "big")
     end = HEADER_LEN + length
     if end + CRC_LEN > len(body):
-        raise MutsumeError("length field exceeds codeword")
+        raise MutsumeError("長さフィールドが符号語を超えています")
     head = body[:end]
     want = int.from_bytes(body[end:end + CRC_LEN], "big")
     if crc16(head) != want:
-        raise MutsumeError("CRC mismatch")
+        raise MutsumeError("CRC が一致しません")
     return body[HEADER_LEN:end]
 
 
@@ -472,11 +472,11 @@ def encode(
     if isinstance(payload, str):
         payload = payload.encode("utf-8")
     if ecc not in ECC_RATIO:
-        raise MutsumeError(f"unknown ECC level: {ecc}")
+        raise MutsumeError(f"不明な ECC レベル: {ecc}")
     if profile not in PROFILES:
-        raise MutsumeError(f"unknown marker profile: {profile}")
+        raise MutsumeError(f"不明なプロファイル: {profile}")
     if palette not in PALETTE_NAMES:
-        raise MutsumeError(f"unknown palette: {palette}")
+        raise MutsumeError(f"不明なパレット: {palette}")
 
     if profile == "micro":
         return _encode_micro(payload, radius, mask)
@@ -524,9 +524,9 @@ def _encode_micro(payload: bytes, radius: int | None, mask: int | None) -> Symbo
                 continue
         if radius is None:
             raise MutsumeError(
-                f"payload too large for micro ({len(payload)} 単位, 最大 "
-                f"{micro_capacity(max_radius('micro'), mode_name)}); "
-                "profile='compact' を使うこと")
+                f"micro には大きすぎます ({len(payload)} 単位, 最大 "
+                f"{micro_capacity(max_radius('micro'), mode_name)} 単位)。"
+                "profile='compact' を使ってください")
 
     layout = get_layout(radius, "micro")
     total = len(layout.data_cells) // 8
@@ -571,7 +571,7 @@ def _decode_micro(grid: dict[Axial, int], radius: int) -> DecodeResult:
         return DecodeResult(payload=payload, radius=radius, ecc="-",
                             mask_id=mask_id, errors_corrected=nerr,
                             segments=info, profile="micro")
-    raise MutsumeError("micro decode failed: " + "; ".join(errors[:2]))
+    raise MutsumeError("micro の復号に失敗しました: " + "; ".join(errors[:2]))
 
 
 @lru_cache(maxsize=None)
@@ -603,8 +603,8 @@ def _smallest_radius(need_bytes: int, ecc: str, profile: str, palette: str) -> i
         except MutsumeError:
             continue
     raise MutsumeError(
-        f"payload too large: needs {need_bytes} bytes, max is "
-        f"{data_capacity(MAX_RADIUS, ecc, profile, palette) + OVERHEAD}")
+        f"データが大きすぎます ({need_bytes} バイト必要, 最大 "
+        f"{data_capacity(MAX_RADIUS, ecc, profile, palette) + OVERHEAD} バイト)")
 
 
 @dataclass
@@ -662,7 +662,7 @@ def decode_grid(grid: dict[Axial, int], radius: int,
     layout = get_layout(radius, profile)
     missing = [c for c in layout.cells if c not in grid]
     if missing:
-        raise MutsumeError(f"grid is missing {len(missing)} cells")
+        raise MutsumeError(f"グリッドに {len(missing)} 個のセルが欠けています")
 
     if profile == "micro":
         return _decode_micro(grid, radius)
@@ -676,14 +676,14 @@ def decode_grid(grid: dict[Axial, int], radius: int,
     raw = _pack_values(_cell_values(layout, grid) ^ tbl, total, palette)
     erase_pos = erasure_bytes(layout, erase_cells, palette) if erase_cells else []
     if len(erase_pos) > nsym:
-        raise MutsumeError(f"too many erasures ({len(erase_pos)} > {nsym})")
+        raise MutsumeError(f"消失が多すぎます ({len(erase_pos)} > {nsym})")
 
     body, nerr = _decode_blocks(raw, plan, erase_pos)
     stream = _parse_body(body)
     try:
         payload, info = decode_segments(stream)
     except ValueError as e:
-        raise MutsumeError(f"segment decode failed: {e}") from e
+        raise MutsumeError(f"セグメントの復号に失敗しました: {e}") from e
     return DecodeResult(payload=payload, radius=radius, ecc=ecc, mask_id=mask_id,
                         errors_corrected=nerr, erasures_used=len(erase_pos),
                         segments=info, profile=profile, palette=palette)
@@ -724,7 +724,7 @@ def decode_grid_any_orientation(grid: dict[Axial, int], radius: int,
         res.orientation = rot
         res.mirrored = mir
         return res
-    raise MutsumeError("no orientation produced a valid decode: " + "; ".join(errors[:3]))
+    raise MutsumeError("どの向きでも正しく復号できませんでした: " + "; ".join(errors[:3]))
 
 
 def decode(symbol: Symbol) -> DecodeResult:
