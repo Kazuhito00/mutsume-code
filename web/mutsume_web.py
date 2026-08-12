@@ -15,21 +15,37 @@ import mutsume
 _hints = []
 
 
-def do_encode(text, ecc, profile, palette, cell_size, grid_lines=True):
+def _hex(h):
+    """'#rrggbb' -> (r, g, b)。"""
+    h = h.lstrip("#")
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+
+def _kw(ecc, profile):
+    kw = {"ecc": ecc}
+    if profile and profile != "auto":
+        kw["profile"] = profile
+    return kw
+
+
+def do_encode(text, ecc, profile, cell_size, dark_hex, light_hex,
+              grid_lines=True, invert=False):
     """テキストをエンコードし {"ok": True, "png": base64, ...} を返す。
 
     容量超過などで生成できないときは {"ok": False, "error": 説明}（例外は投げない）。
-    grid_lines=False で白セルの黒枠線を消す (黒セル同士を分ける白セパレータは残る)。
+    dark_hex / light_hex で暗いセル・明るいセルの色を指定する。invert=True で
+    両者を入れ替える (白黒反転)。grid_lines=False で白セルの枠線を消す。
     """
-    kw = {"ecc": ecc, "palette": palette}
-    if profile and profile != "auto":
-        kw["profile"] = profile
     try:
-        sym = mutsume.encode(text, **kw)
+        sym = mutsume.encode(text, **_kw(ecc, profile))
     except mutsume.MutsumeError as e:
         return json.dumps({"ok": False, "error": str(e)})
+    dark, light = _hex(dark_hex), _hex(light_hex)
+    if invert:
+        dark, light = light, dark
     buf = io.BytesIO()
-    sym.to_image(cell_size=cell_size, grid_lines=grid_lines).save(buf, "PNG")
+    sym.to_image(cell_size=cell_size, grid_lines=grid_lines,
+                 dark_rgb=dark, light_rgb=light).save(buf, "PNG")
     return json.dumps({
         "ok": True,
         "png": base64.b64encode(buf.getvalue()).decode(),
@@ -37,19 +53,16 @@ def do_encode(text, ecc, profile, palette, cell_size, grid_lines=True):
     })
 
 
-def check_encode(text, ecc, profile, palette):
-    """現在の設定でエンコードできるかを調べる。
+def check_encode(text, ecc, profile):
+    """現在の設定でエンコードできるかを調べる (色・反転は容量に無関係)。
 
     {"ok": True, "profile", "radius"} か {"ok": False, "error": 説明} を返す。
     画像は作らないので軽く、入力のたびに呼んでライブ判定できる。
     """
     if not text:
         return json.dumps({"ok": False, "error": "テキストを入力してください。"})
-    kw = {"ecc": ecc, "palette": palette}
-    if profile and profile != "auto":
-        kw["profile"] = profile
     try:
-        sym = mutsume.encode(text, **kw)
+        sym = mutsume.encode(text, **_kw(ecc, profile))
         return json.dumps({"ok": True, "profile": sym.profile, "radius": sym.radius})
     except mutsume.MutsumeError as e:
         return json.dumps({"ok": False, "error": str(e)})

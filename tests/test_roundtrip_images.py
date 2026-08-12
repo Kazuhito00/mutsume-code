@@ -31,9 +31,6 @@ CASES: list[tuple[str, str, dict]] = [
     ("micro_numeric", "123456789", dict(profile="micro")),
     ("micro_alnum", "HELLO", dict(profile="micro")),
     ("micro_byte", "Hi!", dict(profile="micro")),
-    # カラーパレット (容量 2〜3 倍)
-    ("color4", "https://example.com/color?id=42", dict(palette="color4")),
-    ("robust_color4", "https://example.com/color", dict(profile="robust", palette="color4")),
     # 文字モード (数字 / 英数 / バイト / 日本語)
     ("mode_numeric", "0123456789" * 4, dict(ecc="M")),
     ("mode_alnum", "ABCDEFGHIJ 0123456789 $%*+-./:", dict(ecc="M")),
@@ -81,7 +78,6 @@ class TestRoundtripImages(unittest.TestCase):
             ("nogrid_compact", "NO GRID LINES", dict(ecc="Q")),
             ("nogrid_robust", "https://example.com/nogrid",
              dict(profile="robust", ecc="Q")),
-            ("nogrid_color4", "https://example.com/nogrid", dict(palette="color4")),
             ("nogrid_micro", "123456789", dict(profile="micro")),
         ]
         for name, text, kwargs in cases:

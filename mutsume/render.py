@@ -8,7 +8,6 @@ from PIL import Image, ImageDraw
 
 from .codec import Symbol
 from .layout import DIRS, Axial, to_cartesian
-from .palette import rgb255
 
 DARK = (17, 17, 17)
 LIGHT = (255, 255, 255)
@@ -29,12 +28,11 @@ def hex_vertices(cx: float, cy: float, size: float) -> list[tuple[float, float]]
     return pts
 
 
-def cell_fill(symbol: Symbol, cell: Axial) -> tuple[int, int, int]:
-    """セルの塗り色。機能セルは常に黒白、データセルはパレット色。"""
-    v = symbol.grid[cell]
-    if cell in symbol.layout.function_values or _is_format_cell(symbol, cell):
-        return DARK if v else LIGHT
-    return rgb255(symbol.palette, v)
+def cell_fill(symbol: Symbol, cell: Axial,
+              dark: tuple[int, int, int] = DARK,
+              light: tuple[int, int, int] = LIGHT) -> tuple[int, int, int]:
+    """セルの塗り色。値が 1 (暗) なら dark、0 (明) なら light。"""
+    return dark if symbol.grid[cell] else light
 
 
 def _is_format_cell(symbol: Symbol, cell: Axial) -> bool:
@@ -54,14 +52,15 @@ def _edge_color(here: bool, there: bool | None, dark_separator: bool,
     """
     if there is None:
         # 外周: 明るいセルは輪郭を描く。暗いセルは背景との明度差で足りる。
-        return OUTLINE if (grid_lines and not here) else None
+        return "out" if (grid_lines and not here) else None
     if here and there:
-        return SEPARATOR if dark_separator else None
-    return OUTLINE if grid_lines else None
+        return "sep" if dark_separator else None
+    return "out" if grid_lines else None
 
 
 def _collect_edges(symbol: Symbol, verts: dict[Axial, list[tuple[float, float]]],
-                   dark_separator: bool, grid_lines: bool):
+                   dark_separator: bool, grid_lines: bool,
+                   dark=DARK, light=LIGHT):
     """描画すべき境界線を (白セパレータ, 黒輪郭) に分けて返す。
 
     白セパレータを先に、黒輪郭を後から重ねて描く。セル頂点を最終的に黒が占め、
@@ -71,7 +70,8 @@ def _collect_edges(symbol: Symbol, verts: dict[Axial, list[tuple[float, float]]]
     中心セルは白セパレータ経由で外側の白と繋がるが、デコーダ側は白マスクを
     収縮させてから連結成分を取るので細線は切断され、検出には影響しない。
     """
-    dark_of = {c: _is_dark(cell_fill(symbol, c)) for c in symbol.layout.cells}
+    dark_of = {c: _is_dark(cell_fill(symbol, c, dark, light))
+               for c in symbol.layout.cells}
     seps: list[tuple[tuple[float, float], tuple[float, float]]] = []
     outs: list[tuple[tuple[float, float], tuple[float, float]]] = []
     for cell in symbol.layout.cells:
@@ -82,10 +82,10 @@ def _collect_edges(symbol: Symbol, verts: dict[Axial, list[tuple[float, float]]]
             there = dark_of.get(nb)
             if there is not None and nb < cell:
                 continue  # 共有辺は片方からだけ描く
-            color = _edge_color(here, there, dark_separator, grid_lines)
-            if color is SEPARATOR:
+            kind = _edge_color(here, there, dark_separator, grid_lines)
+            if kind == "sep":
                 seps.append((pts[k], pts[(k + 1) % 6]))
-            elif color is OUTLINE:
+            elif kind == "out":
                 outs.append((pts[k], pts[(k + 1) % 6]))
     return seps, outs
 
@@ -113,6 +113,8 @@ def render_png(
     grid_lines: bool = True,
     line_ratio: float = 0.06,
     supersample: int = 3,
+    dark_rgb: tuple[int, int, int] = DARK,
+    light_rgb: tuple[int, int, int] = LIGHT,
 ) -> Image.Image:
     """シンボルを PNG 画像として描画する。
 
@@ -121,7 +123,7 @@ def render_png(
     """
     ox, oy, width, height = _geometry(symbol, cell_size, quiet_cells)
     ss = max(1, supersample)
-    img = Image.new("RGB", (width * ss, height * ss), BACKGROUND)
+    img = Image.new("RGB", (width * ss, height * ss), light_rgb)
     draw = ImageDraw.Draw(img)
     stroke = max(1, int(round(cell_size * line_ratio * ss)))
 
@@ -132,12 +134,13 @@ def render_png(
         pts = [((px + ox) * ss, (py + oy) * ss) for px, py in
                hex_vertices(x, y, cell_size)]
         verts[cell] = pts
-        draw.polygon(pts, fill=cell_fill(symbol, cell))
+        draw.polygon(pts, fill=cell_fill(symbol, cell, dark_rgb, light_rgb))
 
     # 2) 境界線: 白セパレータ -> 黒輪郭 の順に描く
-    seps, outs = _collect_edges(symbol, verts, dark_separator, grid_lines)
+    seps, outs = _collect_edges(symbol, verts, dark_separator, grid_lines,
+                                dark_rgb, light_rgb)
     cap = stroke / 2.0
-    for color, segs in ((SEPARATOR, seps), (OUTLINE, outs)):
+    for color, segs in ((light_rgb, seps), (dark_rgb, outs)):
         for p1, p2 in segs:
             draw.line([p1, p2], fill=color, width=stroke)
             if stroke > 2:  # 角に隙間ができないよう丸キャップを足す
@@ -153,12 +156,14 @@ def render_png(
 
 def render_svg(symbol: Symbol, path: str | None = None, cell_size: float = 18.0,
                quiet_cells: float = 1.5, dark_separator: bool = True,
-               grid_lines: bool = True, line_ratio: float = 0.06) -> str:
+               grid_lines: bool = True, line_ratio: float = 0.06,
+               dark_rgb: tuple[int, int, int] = DARK,
+               light_rgb: tuple[int, int, int] = LIGHT) -> str:
     ox, oy, width, height = _geometry(symbol, cell_size, quiet_cells)
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}">',
-        f'<rect width="100%" height="100%" fill="rgb{BACKGROUND}"/>',
+        f'<rect width="100%" height="100%" fill="rgb{light_rgb}"/>',
     ]
     sw = cell_size * line_ratio
     verts: dict[Axial, list[tuple[float, float]]] = {}
@@ -167,10 +172,11 @@ def render_svg(symbol: Symbol, path: str | None = None, cell_size: float = 18.0,
         pts = [(px + ox, py + oy) for px, py in hex_vertices(x, y, cell_size)]
         verts[cell] = pts
         poly = " ".join(f"{px:.2f},{py:.2f}" for px, py in pts)
-        parts.append(f'<polygon points="{poly}" fill="rgb{cell_fill(symbol, cell)}"/>')
+        parts.append(f'<polygon points="{poly}" fill="rgb{cell_fill(symbol, cell, dark_rgb, light_rgb)}"/>')
 
-    seps, outs = _collect_edges(symbol, verts, dark_separator, grid_lines)
-    for color, segs in ((SEPARATOR, seps), (OUTLINE, outs)):
+    seps, outs = _collect_edges(symbol, verts, dark_separator, grid_lines,
+                                dark_rgb, light_rgb)
+    for color, segs in ((light_rgb, seps), (dark_rgb, outs)):
         for (x1, y1), (x2, y2) in segs:
             parts.append(f'<line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" '
                          f'y2="{y2:.2f}" stroke="rgb{color}" '

@@ -74,8 +74,9 @@ $("enc-run").addEventListener("click", () => {
   if (!text) return;
   const r = JSON.parse(pyEncode(
     text, $("enc-ecc").value, $("enc-profile").value,
-    $("enc-palette").value, parseInt($("enc-size").value, 10),
-    $("enc-grid").checked));
+    parseInt($("enc-size").value, 10),
+    $("enc-dark").value, $("enc-light").value,
+    $("enc-grid").checked, $("enc-invert").checked));
   if (!r.ok) { showWarn(r.error); return; }
   hideWarn();
   document.querySelector("#encode .result").hidden = false;
@@ -97,8 +98,7 @@ function scheduleCheck() {
 function runCheck() {
   if (!pyCheck) return;
   const r = JSON.parse(pyCheck(
-    $("enc-text").value, $("enc-ecc").value,
-    $("enc-profile").value, $("enc-palette").value));
+    $("enc-text").value, $("enc-ecc").value, $("enc-profile").value));
   if (r.ok) { hideWarn(); $("enc-run").disabled = false; }
   else { showWarn(r.error); $("enc-run").disabled = true; }
 }
@@ -110,7 +110,7 @@ function showWarn(msg) {
 function hideWarn() { $("enc-warn").hidden = true; }
 
 $("enc-text").addEventListener("input", scheduleCheck);
-["enc-ecc", "enc-profile", "enc-palette"].forEach(
+["enc-ecc", "enc-profile"].forEach(
   (id) => $(id).addEventListener("change", runCheck));
 
 // --- 共通デコード ------------------------------------------------------------

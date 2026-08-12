@@ -13,4 +13,3 @@ print(sym.to_text())           # コンソールで確認したいとき
 # 主なオプション
 mutsume.encode("IMPORTANT", ecc="H").save("encode_ecc_h.png")          # 誤り訂正を強く
 mutsume.encode("123456789", profile="micro").save("encode_micro.png")  # 最小サイズ
-mutsume.encode("x" * 80, palette="color4").save("encode_color4.png")   # 容量を稼ぐ

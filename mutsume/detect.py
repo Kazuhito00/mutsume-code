@@ -834,24 +834,46 @@ BINARIZERS = ("otsu", "sauvola8", "sauvola16")
 BINARIZER_COST = {"otsu": 1.0, "sauvola8": 3.0, "sauvola16": 3.0}
 
 
-def sweep_order(sizes, kinds=BINARIZERS) -> list[tuple[str, int]]:
-    """(二値化, 作業サイズ) を **安い順** に並べる。
+def sweep_order(sizes, kinds=BINARIZERS,
+                allow_inverted: bool = False) -> list[tuple[str, int, bool]]:
+    """(二値化, 作業サイズ, 反転フラグ) を **安い順** に並べる。
 
     コストはおおむね「画素数 x 二値化の重み」。種類を外側にすると
     otsu@1400 (高い) を sauvola@420 (安い) より先に払うことになる。
     どの組み合わせで当たるかは画像次第 (実測で otsu 75 / sauvola 30) なので、
     全部試すのは変えずに、安い方から並べて当たるまでの時間を縮める。
+
+    allow_inverted=True のときは、通常向きを一巡したあとに白黒反転版を試す。
+    正常な画像は通常向きで先に当たって打ち切られるので、探索が増えるのは
+    「未検出のとき」だけ。
     """
-    pairs = [(k, s) for k in kinds for s in sizes]
-    return sorted(pairs, key=lambda ks: ks[1] * ks[1] * BINARIZER_COST[ks[0]])
+    pairs = sorted(((k, s) for k in kinds for s in sizes),
+                   key=lambda ks: ks[1] * ks[1] * BINARIZER_COST[ks[0]])
+    order = [(k, s, False) for k, s in pairs]
+    if allow_inverted:
+        order += [(k, s, True) for k, s in pairs]
+    return order
 
 
-def make_binarized(kind: str, gray: np.ndarray, rgb: np.ndarray | None) -> Binarized:
-    """種類を指定して二値化する。Sauvola は 1 回 50ms 前後かかる。"""
+def make_binarized(kind: str, gray: np.ndarray, rgb: np.ndarray | None,
+                   inverted: bool = False) -> Binarized:
+    """種類を指定して二値化する。Sauvola は 1 回 50ms 前後かかる。
+
+    inverted=True は白黒反転したコード (明暗が逆) を読むための版。
+    グレースケール (と RGB) を反転してから二値化するので、以降の
+    検出・サンプリングはすべて通常の向きとして処理できる。
+    """
+    if inverted:
+        gray = (255 - gray).astype(np.uint8)
+        rgb = None if rgb is None else (255 - rgb).astype(np.uint8)
     if kind == "otsu":
-        return binarize_otsu(gray, rgb=rgb)
-    frac = 8 if kind == "sauvola8" else 16
-    return binarize_sauvola(gray, max(8, min(gray.shape) // frac), rgb=rgb)
+        bz = binarize_otsu(gray, rgb=rgb)
+    else:
+        frac = 8 if kind == "sauvola8" else 16
+        bz = binarize_sauvola(gray, max(8, min(gray.shape) // frac), rgb=rgb)
+    if inverted:
+        bz.name += " inv"
+    return bz
 
 
 def _binarizations(gray: np.ndarray, rgb: np.ndarray | None = None):
@@ -864,12 +886,15 @@ def decode_image(source, radius_hint: int | None = None,
                  report: DetectionReport | None = None,
                  profile: str | None = None,
                  exclude: list[tuple[float, float, float]] | None = None,
-                 binarizers: tuple[str, ...] | None = None) -> DecodeResult:
+                 binarizers: tuple[str, ...] | None = None,
+                 allow_inverted: bool = True) -> DecodeResult:
     """PNG / JPEG などの画像からシンボルを読み取る。
 
     profile を省略するとすべてのプロファイルを試す。
     exclude に (x, y, r) を渡すと、その円内のロケータ候補を無視する
     (複数シンボルを順に読むときに、既に読んだものを除外するため)。
+    allow_inverted=True (既定) なら白黒反転したコードも読む
+    (未検出のときだけ探索が増える)。allow_inverted=False で無効化。
     """
     img = source if isinstance(source, Image.Image) else Image.open(source)
     rep = report if report is not None else DetectionReport()
@@ -879,7 +904,7 @@ def decode_image(source, radius_hint: int | None = None,
 
     kinds = binarizers or BINARIZERS
     res = _decode_sizes(img, sizes, profiles, radius_hint, rep, exclude, cache,
-                        kinds)
+                        kinds, allow_inverted)
 
     # 粗いサイズで当たった場合は、判明した半径 / プロファイルを手がかりに
     # 最大サイズで引き直す。座標の量子化が細かくなり、ジオメトリの精度が戻る。
@@ -887,7 +912,7 @@ def decode_image(source, radius_hint: int | None = None,
         fine = DetectionReport()
         try:
             better = _decode_sizes(img, [sizes[-1]], [res.profile], res.radius,
-                                   fine, exclude, cache, kinds)
+                                   fine, exclude, cache, kinds, allow_inverted)
         except MutsumeError:
             better = None
         if better is not None and better.payload == res.payload:
@@ -899,7 +924,8 @@ def decode_image(source, radius_hint: int | None = None,
 def _decode_sizes(img, sizes: list[int], profiles: list[str],
                   radius_hint: int | None, rep: DetectionReport,
                   exclude, cache: dict,
-                  kinds: tuple[str, ...] = BINARIZERS) -> DecodeResult:
+                  kinds: tuple[str, ...] = BINARIZERS,
+                  allow_inverted: bool = False) -> DecodeResult:
     """作業サイズ x 二値化の総当たり。
 
     ループの順序が効く。二値化の種類を外側にして **まず安価な Otsu で全サイズを
@@ -909,11 +935,11 @@ def _decode_sizes(img, sizes: list[int], profiles: list[str],
     (同じ検出率で 5 倍速)。
     """
     failures: list[str] = []
-    for kind, size in sweep_order(sizes, kinds):
+    for kind, size, inv in sweep_order(sizes, kinds, allow_inverted):
         if size not in cache:
             cache[size] = _load_image(img, size)
         gray, rgb, scale = cache[size]
-        bz = make_binarized(kind, gray, rgb)
+        bz = make_binarized(kind, gray, rgb, inv)
         rep.work_size, rep.binarization, rep.binarizer = size, bz.name, kind
         try:
             return _decode_binarized(bz, radius_hint, rep, profiles, scale,
@@ -989,7 +1015,8 @@ def decode_image_all(source, max_symbols: int = 8, radius_hint: int | None = Non
                      profile: str | None = None,
                      report: DetectionReport | None = None,
                      hints: list | None = None,
-                     hints_only: bool = False) -> list[DecodeResult]:
+                     hints_only: bool = False,
+                     allow_inverted: bool = True) -> list[DecodeResult]:
     """画像に写っているコードを **すべて** 読み取る。
 
     1 つ読めたらその外形を除外領域に加えて探し直す、を繰り返す。
@@ -1009,30 +1036,33 @@ def decode_image_all(source, max_symbols: int = 8, radius_hint: int | None = Non
     hints_only=True なら、全ヒントが追従できた場合に全探索を省く。
     新しいシンボルはヒントでは見つからないので、呼び出し側で定期的に
     hints_only=False のフレームを挟むこと。
+
+    allow_inverted=True (既定) なら白黒反転したコードも読む
+    (未検出のときだけ探索が増える)。allow_inverted=False で無効化。
     """
     img = source if isinstance(source, Image.Image) else Image.open(source)
     rep = report if report is not None else DetectionReport()
     profiles = [profile] if profile else list(PROFILES)
     sizes = work_sizes(max(img.size))
     loaded: dict[int, tuple[np.ndarray, np.ndarray, float]] = {}
-    bins: dict[tuple[str, int], tuple[Binarized, float]] = {}
-    ctx: dict[tuple[str, int], list] = {}
+    bins: dict[tuple[str, int, bool], tuple[Binarized, float]] = {}
+    ctx: dict[tuple[str, int, bool], list] = {}
 
     # 二値化はトラッキングと全探索の両方で使うので (種類, サイズ) で共有する。
     # 別々に持つと、複数ヒント x 全探索フレームで同じ Sauvola (数十 ms) を
     # 何度も払うことになる。
-    def binarize(kind: str, size: int) -> tuple[Binarized, float]:
-        key = (kind, size)
+    def binarize(kind: str, size: int, inv: bool = False) -> tuple[Binarized, float]:
+        key = (kind, size, inv)
         if key not in bins:
             if size not in loaded:
                 loaded[size] = _load_image(img, size)
             gray, rgb, scale = loaded[size]
-            bins[key] = (make_binarized(kind, gray, rgb), scale)
+            bins[key] = (make_binarized(kind, gray, rgb, inv), scale)
         return bins[key]
 
-    def context(kind: str, size: int):
-        key = (kind, size)
-        bz, scale = binarize(kind, size)
+    def context(kind: str, size: int, inv: bool):
+        key = (kind, size, inv)
+        bz, scale = binarize(kind, size, inv)
         if key not in ctx:
             ctx[key] = find_locator_candidates(bz.dark)
         return bz, scale, ctx[key]
@@ -1055,7 +1085,7 @@ def decode_image_all(source, max_symbols: int = 8, radius_hint: int | None = Non
             exclude.append(ex)
     if hints_only and hints and tracked_all:
         return out
-    order = sweep_order(sizes)
+    order = sweep_order(sizes, allow_inverted=allow_inverted)
     hit_candidates: list[tuple[float, float]] = []
     for k in range(max_symbols - len(out)):
         found = None
@@ -1063,8 +1093,8 @@ def decode_image_all(source, max_symbols: int = 8, radius_hint: int | None = Non
         # 来るので、通常は取りこぼさない。一方「もう無い」を確かめる一巡は
         # 雑然とした画像だと非常に高くつく (実測でフレーム時間の 8 割)。
         budget = None if (k == 0 and not out) else EXTRA_SYMBOL_BUDGET
-        for kind, size in order:
-            bz, scale, cands = context(kind, size)
+        for kind, size, inv in order:
+            bz, scale, cands = context(kind, size, inv)
             rep.work_size, rep.binarization, rep.binarizer = size, bz.name, kind
             try:
                 found = _decode_binarized(bz, radius_hint, rep, profiles,

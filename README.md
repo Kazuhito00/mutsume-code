@@ -8,11 +8,12 @@
 ## できること
 
 - マーカープロファイル 3 種: `micro`（最小） / `compact`（標準） / `robust`（射影変換対応）
-- カラーパレット 2 種: `mono` 1bit / `color4` 2bit（容量 2 倍）
 - 文字モード: 数字 / 英数 / バイト。DP で最適セグメント分割
 - Reed-Solomon ブロック分割 + インターリーブ、消失訂正（遮蔽への耐性）
 - 適応的二値化（Sauvola）で照明ムラに対応
 - 1 枚から複数コードを検出、動画では前フレームを追従
+- 白黒反転したコードも読める（`decode(..., allow_inverted=False)` で無効化）
+- 生成時に暗色・明色を指定でき、白黒反転もできる（Web デモ）
 - 画像上の位置・姿勢（`Geometry`）の取得
 
 ## セットアップ
@@ -33,11 +34,10 @@ Web カメラデモだけ `opencv-python` を使う。
 # 斜めから撮る前提なら robust プロファイル
 .\venv\Scripts\python.exe -m mutsume encode "..." -o out.png --profile robust
 
-# 小さくしたいなら micro / 容量を稼ぎたいならカラー
+# 小さくしたいなら micro
 .\venv\Scripts\python.exe -m mutsume encode 123456789 -o out.png --profile micro
-.\venv\Scripts\python.exe -m mutsume encode "..." -o out.png --palette color4
 
-# 読み取り（プロファイル / パレットは自動判別）
+# 読み取り（プロファイル・向き・白黒反転は自動判別）
 .\venv\Scripts\python.exe -m mutsume decode out.png -v
 
 # 画像上の位置を出す / 重ね描き画像を書き出す
@@ -45,7 +45,7 @@ Web カメラデモだけ `opencv-python` を使う。
 .\venv\Scripts\python.exe -m mutsume decode out.png --overlay overlay.png
 
 # サイズ別の容量表
-.\venv\Scripts\python.exe -m mutsume info --palette color4 --mode numeric
+.\venv\Scripts\python.exe -m mutsume info --mode numeric
 ```
 
 `-o out.svg` にすると SVG で出力する。

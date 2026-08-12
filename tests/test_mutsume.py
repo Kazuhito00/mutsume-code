@@ -1024,7 +1024,6 @@ class TestColorPalettes(unittest.TestCase):
         from mutsume.palette import bits_per_cell
 
         self.assertEqual(bits_per_cell("mono"), 1)
-        self.assertEqual(bits_per_cell("color4"), 2)
 
     def test_mono_value_1_is_dark(self):
         """機能セルの規約 (1 = 暗い) とパレットの並びが一致していること。"""
@@ -1041,49 +1040,6 @@ class TestColorPalettes(unittest.TestCase):
                     res = decode(sym)
                     self.assertEqual(res.payload, self.MSG.encode())
                     self.assertEqual(res.palette, pal)
-
-    def test_capacity_scales_with_bits(self):
-        mono = payload_capacity(20, "M", "byte", "compact", "mono")
-        c4 = payload_capacity(20, "M", "byte", "compact", "color4")
-        self.assertGreater(c4, mono * 1.8)
-
-    def test_image_roundtrip(self):
-        for pal in ("color4",):
-            with self.subTest(palette=pal):
-                sym = encode(self.MSG, ecc="Q", palette=pal)
-                img = render_png(sym, None, cell_size=18)
-                res = decode_image(img)
-                self.assertEqual(res.payload, self.MSG.encode())
-                self.assertEqual(res.palette, pal)
-
-    def test_image_roundtrip_under_degradation(self):
-        sym = encode(self.MSG, ecc="Q", palette="color4")
-        img = render_png(sym, None, cell_size=18)
-        variants = {
-            "rotate": img.rotate(33, resample=Image.BICUBIC, expand=True,
-                                 fillcolor=(247, 245, 240)),
-            "scale": img.resize((int(img.width * 0.35), int(img.height * 0.35)),
-                                Image.LANCZOS),
-            "blur": img.filter(ImageFilter.GaussianBlur(1.5)),
-        }
-        buf = io.BytesIO()
-        img.save(buf, "JPEG", quality=50)
-        buf.seek(0)
-        variants["jpeg"] = Image.open(buf)
-        for name, im in variants.items():
-            with self.subTest(case=name):
-                self.assertEqual(decode_image(im).payload, self.MSG.encode())
-
-    def test_color_symbol_has_only_marker_whites(self):
-        """color4 は白を含まないので、白いセルはマーカー由来だけになる。"""
-        sym = encode(self.MSG, palette="color4")
-        from mutsume.render import cell_fill
-
-        whites = [c for c in sym.layout.cells if cell_fill(sym, c) == (255, 255, 255)]
-        function = set(sym.layout.function_values) | {
-            c for g in sym.layout.format_positions for c in g}
-        self.assertTrue(set(whites).issubset(function))
-        self.assertGreaterEqual(len(whites), 3)
 
 
 class TestFuzzRoundtrip(unittest.TestCase):
