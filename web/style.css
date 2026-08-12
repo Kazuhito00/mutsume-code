@@ -115,6 +115,11 @@ label.check {
   font-size: .9rem; font-weight: 500; color: var(--fg); cursor: pointer;
 }
 label.check input[type=checkbox] { width: auto; margin: 0; accent-color: var(--accent); }
+.warn {
+  margin: 0; padding: .55em .8em; border-radius: var(--radius-sm);
+  background: #fde2e2; color: #b23b3b; font-size: .85rem; font-weight: 600;
+}
+@media (prefers-color-scheme: dark) { .warn { background: #3a1f1f; color: #f0a08c; } }
 
 /* ---- buttons ---- */
 main button, .btnrow button {

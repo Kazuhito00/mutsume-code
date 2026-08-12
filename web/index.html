@@ -29,7 +29,7 @@
       <div class="row">
         <label>ECC
           <select id="enc-ecc">
-            <option>L</option><option selected>M</option><option>Q</option><option>H</option>
+            <option selected>L</option><option>M</option><option>Q</option><option>H</option>
           </select>
         </label>
         <label>プロファイル
@@ -43,9 +43,10 @@
             <option selected>mono</option><option>color4</option>
           </select>
         </label>
-        <label>セルサイズ <input id="enc-size" type="range" min="8" max="30" value="16"></label>
+        <label>セルサイズ <input id="enc-size" type="range" min="8" max="30" value="8"></label>
       </div>
-      <label class="check"><input type="checkbox" id="enc-grid" checked> 白セルの枠線を描く</label>
+      <label class="check"><input type="checkbox" id="enc-grid"> 白セルの枠線を描く</label>
+      <p id="enc-warn" class="warn" hidden></p>
       <button id="enc-run" disabled>生成</button>
     </div>
     <div class="result" hidden>
@@ -82,10 +83,6 @@
     </div>
   </section>
 </main>
-
-<footer>
-  <p>外形・ファインダ・向きを緑で描画します。カメラは前フレームを追従して高速化します。</p>
-</footer>
 
 <script type="module" src="app.js"></script>
 </body>

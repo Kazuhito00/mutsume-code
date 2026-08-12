@@ -7,7 +7,7 @@ const MUT_FILES = ["__init__", "rs", "bits", "palette", "layout", "pose",
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $("status");
-let py, pyEncode, pyDecode, pyReset;
+let py, pyEncode, pyCheck, pyDecode, pyReset;
 
 // --- 初期化 -----------------------------------------------------------------
 
@@ -20,10 +20,12 @@ async function boot() {
     setStatus("mutsume 読み込み中…", "booting");
     await loadMutsume();
     pyEncode = py.globals.get("do_encode");
+    pyCheck = py.globals.get("check_encode");
     pyDecode = py.globals.get("decode_rgba");
     pyReset = py.globals.get("reset_hints");
     setStatus("準備完了", "ready");
     enableUI();
+    runCheck();
   } catch (e) {
     console.error(e);
     setStatus("初期化に失敗: " + e.message, "error");
@@ -70,23 +72,46 @@ document.querySelectorAll(".tabs button").forEach((b) => {
 $("enc-run").addEventListener("click", () => {
   const text = $("enc-text").value;
   if (!text) return;
-  try {
-    const r = JSON.parse(pyEncode(
-      text, $("enc-ecc").value, $("enc-profile").value,
-      $("enc-palette").value, parseInt($("enc-size").value, 10),
-      $("enc-grid").checked));
-    document.querySelector("#encode .result").hidden = false;
-    $("enc-img").src = "data:image/png;base64," + r.png;
-    $("enc-img").hidden = false;
-    $("enc-info").textContent =
-      `profile=${r.profile}  palette=${r.palette}  R=${r.radius}`;
-    const dl = $("enc-dl");
-    dl.href = "data:image/png;base64," + r.png;
-    dl.hidden = false;
-  } catch (e) {
-    $("enc-info").textContent = "エラー: " + e.message;
-  }
+  const r = JSON.parse(pyEncode(
+    text, $("enc-ecc").value, $("enc-profile").value,
+    $("enc-palette").value, parseInt($("enc-size").value, 10),
+    $("enc-grid").checked));
+  if (!r.ok) { showWarn(r.error); return; }
+  hideWarn();
+  document.querySelector("#encode .result").hidden = false;
+  $("enc-img").src = "data:image/png;base64," + r.png;
+  $("enc-img").hidden = false;
+  $("enc-info").textContent =
+    `profile=${r.profile}  palette=${r.palette}  R=${r.radius}`;
+  const dl = $("enc-dl");
+  dl.href = "data:image/png;base64," + r.png;
+  dl.hidden = false;
 });
+
+// テキスト・設定に応じて生成可否をライブ判定し、不可なら注意文言を出す
+let _checkTimer;
+function scheduleCheck() {
+  clearTimeout(_checkTimer);
+  _checkTimer = setTimeout(runCheck, 150);
+}
+function runCheck() {
+  if (!pyCheck) return;
+  const r = JSON.parse(pyCheck(
+    $("enc-text").value, $("enc-ecc").value,
+    $("enc-profile").value, $("enc-palette").value));
+  if (r.ok) { hideWarn(); $("enc-run").disabled = false; }
+  else { showWarn(r.error); $("enc-run").disabled = true; }
+}
+function showWarn(msg) {
+  const w = $("enc-warn");
+  w.textContent = "⚠ " + msg;
+  w.hidden = false;
+}
+function hideWarn() { $("enc-warn").hidden = true; }
+
+$("enc-text").addEventListener("input", scheduleCheck);
+["enc-ecc", "enc-profile", "enc-palette"].forEach(
+  (id) => $(id).addEventListener("change", runCheck));
 
 // --- 共通デコード ------------------------------------------------------------
 

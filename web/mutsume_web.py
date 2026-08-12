@@ -16,20 +16,43 @@ _hints = []
 
 
 def do_encode(text, ecc, profile, palette, cell_size, grid_lines=True):
-    """テキストをエンコードし {"png": base64, profile, palette, radius} を返す。
+    """テキストをエンコードし {"ok": True, "png": base64, ...} を返す。
 
+    容量超過などで生成できないときは {"ok": False, "error": 説明}（例外は投げない）。
     grid_lines=False で白セルの黒枠線を消す (黒セル同士を分ける白セパレータは残る)。
     """
     kw = {"ecc": ecc, "palette": palette}
     if profile and profile != "auto":
         kw["profile"] = profile
-    sym = mutsume.encode(text, **kw)
+    try:
+        sym = mutsume.encode(text, **kw)
+    except mutsume.MutsumeError as e:
+        return json.dumps({"ok": False, "error": str(e)})
     buf = io.BytesIO()
     sym.to_image(cell_size=cell_size, grid_lines=grid_lines).save(buf, "PNG")
     return json.dumps({
+        "ok": True,
         "png": base64.b64encode(buf.getvalue()).decode(),
         "profile": sym.profile, "palette": sym.palette, "radius": sym.radius,
     })
+
+
+def check_encode(text, ecc, profile, palette):
+    """現在の設定でエンコードできるかを調べる。
+
+    {"ok": True, "profile", "radius"} か {"ok": False, "error": 説明} を返す。
+    画像は作らないので軽く、入力のたびに呼んでライブ判定できる。
+    """
+    if not text:
+        return json.dumps({"ok": False, "error": "テキストを入力してください。"})
+    kw = {"ecc": ecc, "palette": palette}
+    if profile and profile != "auto":
+        kw["profile"] = profile
+    try:
+        sym = mutsume.encode(text, **kw)
+        return json.dumps({"ok": True, "profile": sym.profile, "radius": sym.radius})
+    except mutsume.MutsumeError as e:
+        return json.dumps({"ok": False, "error": str(e)})
 
 
 def _geom(r):
