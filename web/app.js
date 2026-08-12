@@ -194,12 +194,12 @@ $("img-file").addEventListener("change", (e) => {
   if (e.target.files[0]) decodeFile(e.target.files[0]);
 });
 
-const imgResult = document.querySelector("#image .result");
+const dropZone = document.getElementById("img-drop");
 ["dragover", "dragenter"].forEach((ev) =>
-  imgResult.addEventListener(ev, (e) => { e.preventDefault(); imgResult.classList.add("drag"); }));
+  dropZone.addEventListener(ev, (e) => { e.preventDefault(); dropZone.classList.add("drag"); }));
 ["dragleave", "drop"].forEach((ev) =>
-  imgResult.addEventListener(ev, (e) => { e.preventDefault(); imgResult.classList.remove("drag"); }));
-imgResult.addEventListener("drop", (e) => {
+  dropZone.addEventListener(ev, (e) => { e.preventDefault(); dropZone.classList.remove("drag"); }));
+dropZone.addEventListener("drop", (e) => {
   const f = e.dataTransfer.files[0];
   if (f && py) decodeFile(f);
 });

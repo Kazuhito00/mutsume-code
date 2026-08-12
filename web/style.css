@@ -124,6 +124,7 @@ input[type=file]::file-selector-button {
 }
 input[type=file]::file-selector-button:hover { filter: brightness(1.06); }
 .filerow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.dropzone { padding: 14px 16px; border: 2px dashed var(--border); border-radius: var(--radius-sm); }
 .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; }
 .hint { color: var(--muted); font-size: .82rem; margin: 0; font-weight: 500; }
 label.check {
@@ -170,6 +171,6 @@ main button:disabled { opacity: .45; cursor: not-allowed; }
   color: var(--accent); font-weight: 600; font-size: .9rem; text-decoration: none;
 }
 #enc-dl:hover { text-decoration: underline; }
-#image .result.drag { outline: 2px dashed var(--accent); outline-offset: 4px; }
+.dropzone.drag { border-color: var(--accent); background: var(--accent-weak); }
 
 footer { margin-top: 40px; text-align: center; color: var(--muted); font-size: .82rem; }
