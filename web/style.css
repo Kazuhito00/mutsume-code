@@ -37,16 +37,17 @@ header, main, footer { max-width: var(--maxw); margin-inline: auto; }
 /* ---- header (brand 左 / status + tabs 右) ---- */
 header {
   display: flex; flex-wrap: wrap; align-items: center;
-  justify-content: space-between; gap: 12px 20px;
-  padding: 22px 0 18px; margin-bottom: 12px;
-  border-bottom: 1px solid var(--border);
+  justify-content: space-between; gap: 10px 20px;
+  padding: 20px 0 16px; border-bottom: 1px solid var(--border);
 }
-.brand { min-width: 0; }
-.brand h1 { margin: 0; font-size: 1.55rem; letter-spacing: -.02em; }
-.brand .sub { color: var(--muted); margin: .25rem 0 0; font-size: .88rem; }
+header h1 { margin: 0; font-size: 1.55rem; letter-spacing: -.02em; }
 .headtools {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   margin-left: auto;
+}
+.sub {
+  max-width: var(--maxw); margin: 12px auto 4px;
+  color: var(--muted); font-size: .88rem;
 }
 
 .status {
@@ -109,6 +110,11 @@ select:focus, textarea:focus, input:focus {
 input[type=range] { width: 100%; accent-color: var(--accent); padding: 0; }
 .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; }
 .hint { color: var(--muted); font-size: .82rem; margin: 0; font-weight: 500; }
+label.check {
+  display: flex; align-items: center; gap: .5em;
+  font-size: .9rem; font-weight: 500; color: var(--fg); cursor: pointer;
+}
+label.check input[type=checkbox] { width: auto; margin: 0; accent-color: var(--accent); }
 
 /* ---- buttons ---- */
 main button, .btnrow button {

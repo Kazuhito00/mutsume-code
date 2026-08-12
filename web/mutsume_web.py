@@ -15,14 +15,17 @@ import mutsume
 _hints = []
 
 
-def do_encode(text, ecc, profile, palette, cell_size):
-    """テキストをエンコードし {"png": base64, profile, palette, radius} を返す。"""
+def do_encode(text, ecc, profile, palette, cell_size, grid_lines=True):
+    """テキストをエンコードし {"png": base64, profile, palette, radius} を返す。
+
+    grid_lines=False で白セルの黒枠線を消す (黒セル同士を分ける白セパレータは残る)。
+    """
     kw = {"ecc": ecc, "palette": palette}
     if profile and profile != "auto":
         kw["profile"] = profile
     sym = mutsume.encode(text, **kw)
     buf = io.BytesIO()
-    sym.to_image(cell_size=cell_size).save(buf, "PNG")
+    sym.to_image(cell_size=cell_size, grid_lines=grid_lines).save(buf, "PNG")
     return json.dumps({
         "png": base64.b64encode(buf.getvalue()).decode(),
         "profile": sym.profile, "palette": sym.palette, "radius": sym.radius,

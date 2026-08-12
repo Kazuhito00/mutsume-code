@@ -8,10 +8,7 @@
 </head>
 <body>
 <header>
-  <div class="brand">
-    <h1>mutsume-code</h1>
-    <p class="sub">六角格子の 2 次元コード。すべてブラウザ内 (Pyodide / WASM) で実行。</p>
-  </div>
+  <h1>mutsume-code</h1>
   <div class="headtools">
     <div id="status" class="status booting">初期化中…</div>
     <nav class="tabs">
@@ -21,6 +18,8 @@
     </nav>
   </div>
 </header>
+
+<p class="sub">六角格子の 2 次元コード。すべてブラウザ内 (Pyodide / WASM) で実行。</p>
 
 <main>
   <!-- 生成 -->
@@ -46,6 +45,7 @@
         </label>
         <label>セルサイズ <input id="enc-size" type="range" min="8" max="30" value="16"></label>
       </div>
+      <label class="check"><input type="checkbox" id="enc-grid" checked> 白セルの枠線を描く</label>
       <button id="enc-run" disabled>生成</button>
     </div>
     <div class="result" hidden>

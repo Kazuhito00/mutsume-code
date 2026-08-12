@@ -73,7 +73,8 @@ $("enc-run").addEventListener("click", () => {
   try {
     const r = JSON.parse(pyEncode(
       text, $("enc-ecc").value, $("enc-profile").value,
-      $("enc-palette").value, parseInt($("enc-size").value, 10)));
+      $("enc-palette").value, parseInt($("enc-size").value, 10),
+      $("enc-grid").checked));
     document.querySelector("#encode .result").hidden = false;
     $("enc-img").src = "data:image/png;base64," + r.png;
     $("enc-img").hidden = false;
