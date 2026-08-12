@@ -217,3 +217,10 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 /CLAUDE.md
+
+# mutsume-code のデモ / テスト生成物
+_site/
+tests/generated/
+encode_*.png
+encode_*.svg
+captures/

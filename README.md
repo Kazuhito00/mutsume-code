@@ -97,6 +97,21 @@ mutsume.capacity(10, mode="numeric")  # -> 数字の桁数
 読み取り結果を出す。前フレームで読めた位置を追従して高速化する（既定オン、
 `--refresh` で全探索の間隔を調整）。`q` / ESC で終了。
 
+## ブラウザデモ（GitHub Pages）
+
+`web/` に Pyodide ベースのデモがある。生成・画像からの読み取り・カメラ読み取りを
+**すべてブラウザ内（WASM）で実行**する（コアの `mutsume` は無改造。numpy / pillow は
+Pyodide が供給し、カメラは JS 側で取得するので opencv は不要）。
+
+リポジトリの Settings → Pages で Source を「GitHub Actions」にすると、
+`.github/workflows/pages.yml` が `web/` と `mutsume/` を配信する。
+
+```powershell
+# ローカル確認（web/ と mutsume/ を同じ場所に並べて配信するだけ）
+mkdir _site; Copy-Item -Recurse web\* _site\; Copy-Item -Recurse mutsume _site\mutsume
+.\venv\Scripts\python.exe -m http.server -d _site 8000   # http://localhost:8000
+```
+
 ## テスト
 
 ```powershell
@@ -126,6 +141,8 @@ tests/                単体テストと往復テスト（画像を tests/genera
 example_encode.py     生成の最小例
 example_decode.py     読み取りの最小例
 example_webcam.py     カメラ / 動画 / 静止画で読むデモ（要 opencv-python）
+web/                  ブラウザ (Pyodide) デモ。GitHub Pages で配信
+.github/workflows/    Pages への自動デプロイ
 ```
 
 ## 現状の限界
