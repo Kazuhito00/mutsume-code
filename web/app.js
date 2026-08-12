@@ -74,7 +74,9 @@ $("enc-run").addEventListener("click", () => {
     const r = JSON.parse(pyEncode(
       text, $("enc-ecc").value, $("enc-profile").value,
       $("enc-palette").value, parseInt($("enc-size").value, 10)));
+    document.querySelector("#encode .result").hidden = false;
     $("enc-img").src = "data:image/png;base64," + r.png;
+    $("enc-img").hidden = false;
     $("enc-info").textContent =
       `profile=${r.profile}  palette=${r.palette}  R=${r.radius}`;
     const dl = $("enc-dl");
@@ -143,6 +145,7 @@ function drawOverlay(ctx, results) {
 // --- 画像から読み取り --------------------------------------------------------
 
 async function decodeFile(file) {
+  document.querySelector("#image .result").hidden = false;
   const bmp = await createImageBitmap(file);
   const canvas = $("img-canvas");
   const scale = Math.min(1, 1200 / bmp.width);
@@ -189,6 +192,7 @@ async function startCamera() {
     const video = $("cam-video");
     video.srcObject = stream;
     await video.play();
+    document.querySelector("#camera .result").hidden = false;
     pyReset();
     frameNo = 0;
     camRunning = true;

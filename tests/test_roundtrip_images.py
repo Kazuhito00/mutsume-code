@@ -33,7 +33,6 @@ CASES: list[tuple[str, str, dict]] = [
     ("micro_byte", "Hi!", dict(profile="micro")),
     # カラーパレット (容量 2〜3 倍)
     ("color4", "https://example.com/color?id=42", dict(palette="color4")),
-    ("color8", "https://example.com/color?id=42", dict(palette="color8")),
     ("robust_color4", "https://example.com/color", dict(profile="robust", palette="color4")),
     # 文字モード (数字 / 英数 / バイト / 日本語)
     ("mode_numeric", "0123456789" * 4, dict(ecc="M")),

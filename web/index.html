@@ -9,7 +9,7 @@
 <body>
 <header>
   <h1>mutsume-code</h1>
-  <p>六角格子の 2 次元コード。生成・読み取りをすべてブラウザ内 (Pyodide / WASM) で実行します。</p>
+  <p class="sub">六角格子の 2 次元コード。生成・読み取りをすべてブラウザ内 (Pyodide / WASM) で実行します。</p>
   <div id="status" class="status booting">初期化中…</div>
 </header>
 
@@ -38,16 +38,16 @@
         </label>
         <label>パレット
           <select id="enc-palette">
-            <option selected>mono</option><option>color4</option><option>color8</option>
+            <option selected>mono</option><option>color4</option>
           </select>
         </label>
         <label>セルサイズ <input id="enc-size" type="range" min="8" max="30" value="16"></label>
       </div>
       <button id="enc-run" disabled>生成</button>
     </div>
-    <div class="result">
+    <div class="result" hidden>
       <div id="enc-info" class="info"></div>
-      <img id="enc-img" alt="生成されたコード">
+      <img id="enc-img" alt="生成されたコード" hidden>
       <a id="enc-dl" download="mutsume.png" hidden>PNG をダウンロード</a>
     </div>
   </section>
@@ -58,7 +58,7 @@
       <label>画像ファイル <input id="img-file" type="file" accept="image/*" disabled></label>
       <p class="hint">またはここに画像をドラッグ＆ドロップ</p>
     </div>
-    <div class="result">
+    <div class="result" hidden>
       <div id="img-info" class="info"></div>
       <canvas id="img-canvas"></canvas>
     </div>
@@ -67,11 +67,13 @@
   <!-- カメラ -->
   <section id="camera" class="tab">
     <div class="controls">
-      <button id="cam-start" disabled>カメラ開始</button>
-      <button id="cam-stop" disabled>停止</button>
-      <span id="cam-stat" class="info"></span>
+      <div class="btnrow">
+        <button id="cam-start" disabled>カメラ開始</button>
+        <button id="cam-stop" disabled>停止</button>
+        <span id="cam-stat" class="info"></span>
+      </div>
     </div>
-    <div class="result">
+    <div class="result" hidden>
       <video id="cam-video" playsinline muted hidden></video>
       <canvas id="cam-canvas"></canvas>
     </div>

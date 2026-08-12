@@ -132,7 +132,7 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("--profile", default=DEFAULT_PROFILE, choices=list(PROFILES),
                    help="compact=マーカー最小(アフィンまで) / robust=射影変換対応")
     e.add_argument("--palette", default=DEFAULT_PALETTE, choices=list(PALETTE_NAMES),
-                   help="mono=1bit/セル, color4=2bit (CMYK), color8=3bit (RGB)")
+                   help="mono=1bit/セル, color4=2bit (CMYK)")
     e.add_argument("--radius", type=int, default=None, help="シンボル半径 (省略で自動)")
     e.add_argument("--mask", type=int, default=None, help="マスク ID (省略で自動選択)")
     e.add_argument("--cell-size", type=float, default=18.0)

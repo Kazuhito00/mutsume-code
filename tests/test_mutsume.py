@@ -1025,7 +1025,6 @@ class TestColorPalettes(unittest.TestCase):
 
         self.assertEqual(bits_per_cell("mono"), 1)
         self.assertEqual(bits_per_cell("color4"), 2)
-        self.assertEqual(bits_per_cell("color8"), 3)
 
     def test_mono_value_1_is_dark(self):
         """機能セルの規約 (1 = 暗い) とパレットの並びが一致していること。"""
@@ -1046,12 +1045,10 @@ class TestColorPalettes(unittest.TestCase):
     def test_capacity_scales_with_bits(self):
         mono = payload_capacity(20, "M", "byte", "compact", "mono")
         c4 = payload_capacity(20, "M", "byte", "compact", "color4")
-        c8 = payload_capacity(20, "M", "byte", "compact", "color8")
         self.assertGreater(c4, mono * 1.8)
-        self.assertGreater(c8, mono * 2.8)
 
     def test_image_roundtrip(self):
-        for pal in ("color4", "color8"):
+        for pal in ("color4",):
             with self.subTest(palette=pal):
                 sym = encode(self.MSG, ecc="Q", palette=pal)
                 img = render_png(sym, None, cell_size=18)

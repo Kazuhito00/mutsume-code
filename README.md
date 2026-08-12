@@ -8,7 +8,7 @@
 ## できること
 
 - マーカープロファイル 3 種: `micro`（最小） / `compact`（標準） / `robust`（射影変換対応）
-- カラーパレット 3 種: `mono` 1bit / `color4` 2bit / `color8` 3bit（容量 2〜3 倍）
+- カラーパレット 2 種: `mono` 1bit / `color4` 2bit（容量 2 倍）
 - 文字モード: 数字 / 英数 / バイト。DP で最適セグメント分割
 - Reed-Solomon ブロック分割 + インターリーブ、消失訂正（遮蔽への耐性）
 - 適応的二値化（Sauvola）で照明ムラに対応
@@ -107,9 +107,8 @@ Pyodide が供給し、カメラは JS 側で取得するので opencv は不要
 `.github/workflows/pages.yml` が `web/` と `mutsume/` を配信する。
 
 ```powershell
-# ローカル確認（web/ と mutsume/ を同じ場所に並べて配信するだけ）
-mkdir _site; Copy-Item -Recurse web\* _site\; Copy-Item -Recurse mutsume _site\mutsume
-.\venv\Scripts\python.exe -m http.server -d _site 8000   # http://localhost:8000
+# ローカル確認（web/ と mutsume/ を集めて配信。.js の MIME も正しく返す）
+.\venv\Scripts\python.exe serve_web.py       # http://localhost:8000
 ```
 
 ## テスト
