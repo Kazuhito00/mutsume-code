@@ -116,6 +116,14 @@ input[type=color] {
 .row-colors { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; }
 label.inline { display: flex; flex-direction: row; align-items: center; gap: .5em; }
 label.inline input[type=color] { width: 48px; height: 2em; padding: 2px; }
+label.inline input[type=file] { width: auto; }
+input[type=file]::file-selector-button {
+  font: inherit; font-weight: 600; cursor: pointer; margin-right: .6em;
+  padding: .4em 1em; border: none; border-radius: var(--radius-sm);
+  background: var(--accent); color: var(--accent-fg);
+}
+input[type=file]::file-selector-button:hover { filter: brightness(1.06); }
+.filerow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
 .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; }
 .hint { color: var(--muted); font-size: .82rem; margin: 0; font-weight: 500; }
 label.check {

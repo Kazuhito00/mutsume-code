@@ -45,9 +45,9 @@
         <label class="inline">明るいセルの色 <input id="enc-light" type="color" value="#ffffff"></label>
         <label class="check"><input type="checkbox" id="enc-invert"> 白黒を反転</label>
         <label class="check"><input type="checkbox" id="enc-grid"> 白セルの枠線を描く</label>
+        <button id="enc-run" disabled>生成</button>
       </div>
       <p id="enc-warn" class="warn" hidden></p>
-      <button id="enc-run" disabled>生成</button>
     </div>
     <div class="result" hidden>
       <div id="enc-info" class="info"></div>
@@ -59,8 +59,10 @@
   <!-- 画像から読み取り -->
   <section id="image" class="tab">
     <div class="controls">
-      <label>画像ファイル <input id="img-file" type="file" accept="image/*" disabled></label>
-      <p class="hint">またはここに画像をドラッグ＆ドロップ</p>
+      <div class="filerow">
+        <label class="inline">画像ファイル <input id="img-file" type="file" accept="image/*" disabled></label>
+        <span class="hint">またはここにドラッグ＆ドロップ</span>
+      </div>
     </div>
     <div class="result" hidden>
       <div id="img-info" class="info"></div>
