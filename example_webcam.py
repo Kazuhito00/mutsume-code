@@ -1,11 +1,12 @@
-"""Web カメラで mutsume-code を読み取るシンプルなデモ (トラッキングなし)。
+"""Web カメラで mutsume-code を読み取るシンプルなデモ。
 
     venv\\Scripts\\python.exe example_webcam.py                 # カメラ 0 番
     venv\\Scripts\\python.exe example_webcam.py --camera 1
     venv\\Scripts\\python.exe example_webcam.py --video sample.mp4
     venv\\Scripts\\python.exe example_webcam.py --image encode_basic.png
 
-毎フレームをゼロから全探索する。検出したコードの外形・ファインダ・向きを緑で描き、
+前フレームで読めた位置を追従して高速化する (既定オン。--refresh で全探索の間隔を
+調整、1 で毎フレーム全探索)。検出したコードの外形・ファインダ・向きを緑で描き、
 その右上に読み取り結果を出す。左上に FPS・復号時間・検出数を表示。
 
 キー: q / ESC で終了
@@ -39,11 +40,15 @@ GREEN = (60, 220, 60)  # BGR
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 
-def decode_frame(frame, decode_width, max_symbols):
+def decode_frame(frame, decode_width, max_symbols, hints=None, hints_only=False):
     """1 フレームを復号して (検出結果, 所要秒) を返す。
 
     復号前に decode_width まで縮小すると速く、実写ではモアレも減って
     検出率が上がる。座標は縮小画像基準で返るので、元フレームへ戻す。
+
+    hints に前フレームの Geometry を渡すとトラッキング (検出を跳ばして
+    前回の姿勢の近傍だけで復号) になり、1 フレームが数 ms で済む。hints は
+    縮小画像基準なので、フレーム幅が一定なら次フレームへそのまま使える。
     """
     scale, work = 1.0, frame
     if decode_width and frame.shape[1] > decode_width:
@@ -53,9 +58,12 @@ def decode_frame(frame, decode_width, max_symbols):
     img = Image.fromarray(cv2.cvtColor(work, cv2.COLOR_BGR2RGB))
 
     t0 = time.time()
-    results = mutsume.decode_all(img, max_symbols=max_symbols)
+    results = mutsume.decode_all(img, max_symbols=max_symbols,
+                                 hints=hints, hints_only=hints_only)
     elapsed = time.time() - t0
 
+    # scaled() は縮小画像基準の geometry を別オブジェクトへ写す。描画にはこれを
+    # 使い、次フレームの hints には未スケールの res.geometry をそのまま渡す。
     back = 1.0 / scale
     found = [(r, r.geometry.scaled(back)) for r in results if r.geometry]
     return found, elapsed
@@ -108,8 +116,7 @@ def open_source(args):
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(
-        description="mutsume-code Web カメラデモ (シンプル / トラッキングなし)")
+    p = argparse.ArgumentParser(description="mutsume-code Web カメラデモ (シンプル)")
     p.add_argument("--camera", type=int, default=0, help="カメラ番号")
     p.add_argument("--video", help="動画ファイルから読む")
     p.add_argument("--image", help="静止画から読む (繰り返し表示)")
@@ -117,10 +124,15 @@ def main(argv=None) -> int:
                    help="復号前に縮小する横幅 (0 で無効)。小さいほど速い")
     p.add_argument("--max-symbols", type=int, default=2,
                    help="1 フレームで探すコードの最大数")
+    p.add_argument("--refresh", type=int, default=10,
+                   help="全探索を行う間隔 (フレーム数)。間のフレームは前回の"
+                        "位置を追従するだけなので速い。1 で毎フレーム全探索")
     args = p.parse_args(argv)
 
     cap, still = open_source(args)
     fps, fps_t0, fps_n = 0.0, time.time(), 0
+    total = 0
+    hints: list = []  # 前フレームで読めた姿勢 (トラッキング用、既定オン)
     try:
         while True:
             if still is not None:
@@ -130,8 +142,14 @@ def main(argv=None) -> int:
                 if not ok:
                     break
 
+            total += 1
+            # 全探索は refresh フレームごと。間のフレームは前回の位置を追従する
+            # (新しく現れたコードは次の全探索で拾う)
+            full = (not hints) or args.refresh <= 1 or (total % args.refresh == 1)
             found, elapsed = decode_frame(
-                frame, args.decode_width or None, args.max_symbols)
+                frame, args.decode_width or None, args.max_symbols,
+                hints=hints or None, hints_only=not full)
+            hints = [res.geometry for res, _ in found if res.geometry]
 
             fps_n += 1
             now = time.time()
