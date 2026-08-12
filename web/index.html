@@ -59,8 +59,9 @@
   <!-- 画像から読み取り -->
   <section id="image" class="tab">
     <div class="controls">
-      <div class="filerow dropzone" id="img-drop">
-        <label class="inline">画像ファイル <input id="img-file" type="file" accept="image/*" disabled></label>
+      <div class="dropzone" id="img-drop">
+        <input id="img-file" type="file" accept="image/*" hidden disabled>
+        <label for="img-file" class="filebtn">ファイルを選択</label>
         <span class="hint">またはここにドラッグ＆ドロップ</span>
       </div>
     </div>
