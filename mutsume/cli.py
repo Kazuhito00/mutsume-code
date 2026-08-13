@@ -130,7 +130,7 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("-o", "--output", default="mutsume.png", help="出力ファイル (.png/.svg)")
     e.add_argument("--ecc", default="M", choices=list(ECC_LEVELS))
     e.add_argument("--profile", default=DEFAULT_PROFILE, choices=list(PROFILES),
-                   help="compact=標準 / robust=射影対応 / micro=小 / nano=極小(中央1個)")
+                   help="compact=マーカー最小(アフィンまで) / robust=射影変換対応")
     e.add_argument("--palette", default=DEFAULT_PALETTE, choices=list(PALETTE_NAMES),
                    help="白黒 (mono)")
     e.add_argument("--radius", type=int, default=None, help="シンボル半径 (省略で自動)")

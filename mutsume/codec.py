@@ -122,11 +122,11 @@ def micro_parity(total_bytes: int) -> int:
     return nsym
 
 
-def micro_capacity(radius: int, mode: str = "byte", profile: str = "micro") -> int:
-    """micro / nano で格納できる文字数 / バイト数。"""
+def micro_capacity(radius: int, mode: str = "byte") -> int:
+    """micro で格納できる文字数 / バイト数。"""
     if mode not in MODE_BY_NAME:
         raise MutsumeError(f"不明なモード: {mode}")
-    total = len(get_layout(radius, profile).data_cells) // 8
+    total = len(get_layout(radius, "micro").data_cells) // 8
     # ビットストリームに使えるのは (データ符号語 - CRC 2B)。
     # そこからヘッダ (モード 2bit + 個数 6bit) を引く。
     budget = (total - micro_parity(total) - MICRO_CRC_LEN) * 8 - \
@@ -288,9 +288,9 @@ def payload_capacity(radius: int, ecc: str, mode: str = "byte",
     """指定モード 1 セグメントで格納できるペイロードの文字数 / バイト数。"""
     if mode not in MODE_BY_NAME:
         raise MutsumeError(f"不明なモード: {mode}")
-    if profile in ("micro", "nano"):
-        # micro / nano は ECC 固定・mono 固定
-        return micro_capacity(radius, mode, profile)
+    if profile == "micro":
+        # micro は ECC 固定・mono 固定
+        return micro_capacity(radius, mode)
     # ビットストリームに使えるビット数から、セグメントヘッダと終端を引く
     budget = data_capacity(radius, ecc, profile, palette) * 8 - SWITCH_BITS - MODE_BITS
     if budget <= 0:
@@ -478,8 +478,8 @@ def encode(
     if palette not in PALETTE_NAMES:
         raise MutsumeError(f"不明なパレット: {palette}")
 
-    if profile in ("micro", "nano"):
-        return _encode_micro(payload, radius, mask, profile)
+    if profile == "micro":
+        return _encode_micro(payload, radius, mask)
 
     segments = choose_segments(payload)
     stream = encode_segments(payload, segments)
@@ -511,25 +511,24 @@ def encode(
                   palette=palette)
 
 
-def _encode_micro(payload: bytes, radius: int | None, mask: int | None,
-                  profile: str = "micro") -> Symbol:
-    """micro / nano の符号化。ECC 固定・単一セグメント・1 RS ブロック。"""
+def _encode_micro(payload: bytes, radius: int | None, mask: int | None) -> Symbol:
+    """micro プロファイルの符号化。ECC 固定・単一セグメント・1 RS ブロック。"""
     mode_name = MODE_NAMES[widest_mode(payload)]
     if radius is None:
-        for r in range(min_radius(profile), max_radius(profile) + 1):
+        for r in range(min_radius("micro"), max_radius("micro") + 1):
             try:
-                if micro_capacity(r, mode_name, profile) >= len(payload):
+                if micro_capacity(r, mode_name) >= len(payload):
                     radius = r
                     break
             except MutsumeError:
                 continue
         if radius is None:
             raise MutsumeError(
-                f"{profile} には大きすぎます ({len(payload)} 単位, 最大 "
-                f"{micro_capacity(max_radius(profile), mode_name, profile)} 単位)。"
+                f"micro には大きすぎます ({len(payload)} 単位, 最大 "
+                f"{micro_capacity(max_radius('micro'), mode_name)} 単位)。"
                 "profile='compact' を使ってください")
 
-    layout = get_layout(radius, profile)
+    layout = get_layout(radius, "micro")
     total = len(layout.data_cells) // 8
     nsym = micro_parity(total)
     codeword = rs_encode(_build_micro_body(payload, total - nsym), nsym)
@@ -545,20 +544,19 @@ def _encode_micro(payload: bytes, radius: int | None, mask: int | None,
     assert best is not None
     _, mask_id, grid = best
     return Symbol(radius=radius, ecc="-", mask_id=mask_id, grid=grid,
-                  segments=[(mode_name, len(payload))], profile=profile,
+                  segments=[(mode_name, len(payload))], profile="micro",
                   palette=DEFAULT_PALETTE)
 
 
-def _decode_micro(grid: dict[Axial, int], radius: int,
-                  profile: str = "micro") -> DecodeResult:
-    """マスク ID を総当たりして復号する (micro / nano はフォーマット領域を持たない)。"""
-    layout = get_layout(radius, profile)
+def _decode_micro(grid: dict[Axial, int], radius: int) -> DecodeResult:
+    """マスク ID を総当たりして復号する (micro はフォーマット領域を持たない)。"""
+    layout = get_layout(radius, "micro")
     total = len(layout.data_cells) // 8
     nsym = micro_parity(total)
     errors = []
     values = _cell_values(layout, grid)
     for mask_id in range(MASK_COUNT):
-        tbl = mask_table(radius, profile, DEFAULT_PALETTE, mask_id)
+        tbl = mask_table(radius, "micro", DEFAULT_PALETTE, mask_id)
         raw = _pack_values(values ^ tbl, total, DEFAULT_PALETTE)
         try:
             body, nerr = rs_decode(raw, nsym)
@@ -572,8 +570,8 @@ def _decode_micro(grid: dict[Axial, int], radius: int,
             continue
         return DecodeResult(payload=payload, radius=radius, ecc="-",
                             mask_id=mask_id, errors_corrected=nerr,
-                            segments=info, profile=profile)
-    raise MutsumeError(f"{profile} の復号に失敗しました: " + "; ".join(errors[:2]))
+                            segments=info, profile="micro")
+    raise MutsumeError("micro の復号に失敗しました: " + "; ".join(errors[:2]))
 
 
 @lru_cache(maxsize=None)
@@ -666,8 +664,8 @@ def decode_grid(grid: dict[Axial, int], radius: int,
     if missing:
         raise MutsumeError(f"グリッドに {len(missing)} 個のセルが欠けています")
 
-    if profile in ("micro", "nano"):
-        return _decode_micro(grid, radius, profile)
+    if profile == "micro":
+        return _decode_micro(grid, radius)
 
     ecc, mask_id, palette = read_format(layout, grid)
     total = cell_capacity_bytes(layout, palette)

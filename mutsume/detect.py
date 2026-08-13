@@ -1298,41 +1298,6 @@ def _pose_candidates(bz: Binarized, triples, radius_hint: int | None, profile: s
                                      and marker >= EARLY_MARKER_MIN))
 
 
-def _similarity_H(cx: float, cy: float, size: float, deg: float,
-                  mirror: bool) -> np.ndarray:
-    """中心 (cx, cy)・1 セルの外接円半径 size・回転 deg・鏡映 の相似変換 H。"""
-    t = math.radians(deg)
-    cos, sin = math.cos(t), math.sin(t)
-    m = -1.0 if mirror else 1.0
-    return np.array([
-        [size * cos, -size * sin * m, cx],
-        [size * sin, size * cos * m, cy],
-        [0.0, 0.0, 1.0],
-    ], dtype=float)
-
-
-def _nano_poses(cands: list[LocatorCandidate], radius_hint: int | None,
-                limit: int):
-    """中央ブルズアイ候補から nano の姿勢を生成する。
-
-    ロケータが 1 個で向きが定まらないので、候補中心をシンボル中心、
-    c.pitch (黒リング半径) からセルサイズを取り、回転 x 鏡映 2 x 半径を
-    総当たりする。六角格子の対称は 60 度だが、対称回転ではセル値の並びが
-    ずれるので、実際の傾きに合う向きまで全周を ~5 度刻みで探す
-    (外周セルが隣へずれない粒度)。0 度付近を先に試すので正対画像は速い。
-    """
-    radii = ([radius_hint] if radius_hint
-             else list(range(min_radius("nano"), max_radius("nano") + 1)))
-    degs = [0.0] + [float(d) for d in range(5, 360, 5)]
-    for c in cands[:limit]:
-        size = c.pitch / CELL_PITCH  # pitch = √3 * size
-        for radius in radii:
-            for deg in degs:
-                for mirror in (False, True):
-                    H = _similarity_H(c.cx, c.cy, size, deg, mirror)
-                    yield _Pose(1.0, radius, "nano", H, False, perfect=False)
-
-
 def _decode_binarized(bz: Binarized, radius_hint: int | None,
                       rep: DetectionReport, profiles: list[str],
                       scale: float = 1.0,
@@ -1348,7 +1313,7 @@ def _decode_binarized(bz: Binarized, radius_hint: int | None,
                         for ex, ey, er in exclude)]
     rep.candidates = len(cands)
     rep.finder_candidates = [(c.cx * inv, c.cy * inv) for c in cands]
-    if len(cands) < 3 and "nano" not in profiles:
+    if len(cands) < 3:
         raise MutsumeError(f"ロケータ候補が見つかりません ({len(cands)} 個)")
 
     poses: list[_Pose] = []
@@ -1358,16 +1323,6 @@ def _decode_binarized(bz: Binarized, radius_hint: int | None,
     # 1 回だけ計算して使い回す (実測で 1 フレーム 31.6 回 -> 半減)。
     plain_triples: list | None = None
     for profile in profiles:
-        if profile == "nano":
-            # ロケータ 1 個なので三つ組は作れない。候補中心から相似姿勢を
-            # 直接生成し、向きを総当たりで試す。
-            nlimit = budget[0] if budget else MAX_TRIPLES
-            for pose in _nano_poses(cands, radius_hint, nlimit):
-                poses.append(pose)
-                res = _try_pose(bz, pose, rep, scale)
-                if res is not None:
-                    return res
-            continue
         if profile == "robust":
             # 2 重リングは一発識別できるので、候補を絞ったうえで
             # 三角形の条件を大きく緩められる (= 射影歪みに追従できる)。
@@ -1457,7 +1412,7 @@ def _try_pose(bz: Binarized, pose: _Pose, rep: DetectionReport,
         # そのパレットで判定し直す。micro はフォーマット領域を持たず
         # 常に mono なのでそのまま。
         layout = get_layout(radius, profile)
-        if profile not in ("micro", "nano"):
+        if profile != "micro":
             try:
                 _, _, palette = read_format(layout, sampled.bits)
             except (KeyError, IndexError):
