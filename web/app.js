@@ -76,7 +76,8 @@ $("enc-run").addEventListener("click", () => {
     text, $("enc-ecc").value, $("enc-profile").value,
     parseInt($("enc-size").value, 10),
     $("enc-dark").value, $("enc-light").value,
-    $("enc-grid").checked, $("enc-invert").checked));
+    $("enc-grid").checked, $("enc-invert").checked,
+    $("enc-dark-grid").checked));
   if (!r.ok) { showWarn(r.error); return; }
   hideWarn();
   document.querySelector("#encode .result").hidden = false;

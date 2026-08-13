@@ -29,13 +29,13 @@ def _kw(ecc, profile):
 
 
 def do_encode(text, ecc, profile, cell_size, dark_hex, light_hex,
-              grid_lines=True, invert=False):
+              grid_lines=True, invert=False, dark_separator=True):
     """テキストをエンコードし {"ok": True, "png": base64, ...} を返す。
 
     容量超過などで生成できないときは {"ok": False, "error": 説明}（例外は投げない）。
     dark_hex / light_hex で暗いセル・明るいセルの色を指定する。invert=True で
     暗色と明色を入れ替える (色相は保ったまま明暗を反転する)。
-    grid_lines=False で白セルの枠線を消す。
+    grid_lines は明るいセルの枠線、dark_separator は暗いセル同士を分ける枠線。
     """
     try:
         sym = mutsume.encode(text, **_kw(ecc, profile))
@@ -46,6 +46,7 @@ def do_encode(text, ecc, profile, cell_size, dark_hex, light_hex,
         dark, light = light, dark
     buf = io.BytesIO()
     sym.to_image(cell_size=cell_size, grid_lines=grid_lines,
+                 dark_separator=dark_separator,
                  dark_rgb=dark, light_rgb=light).save(buf, "PNG")
     return json.dumps({
         "ok": True,
