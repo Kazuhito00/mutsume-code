@@ -35,12 +35,12 @@ async function boot() {
 async function loadMutsume() {
   py.FS.mkdir("/mutsume");
   await Promise.all(MUT_FILES.map(async (f) => {
-    const r = await fetch(`mutsume/${f}.py`);
+    const r = await fetch(`mutsume/${f}.py`, { cache: "no-store" });
     if (!r.ok) throw new Error(`mutsume/${f}.py (${r.status})`);
     py.FS.writeFile(`/mutsume/${f}.py`, await r.text());
   }));
   py.runPython("import sys; sys.path.insert(0, '/')");
-  const helper = await (await fetch("mutsume_web.py")).text();
+  const helper = await (await fetch("mutsume_web.py", { cache: "no-store" })).text();
   py.runPython(helper);
 }
 
