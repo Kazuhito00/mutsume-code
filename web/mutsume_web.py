@@ -7,7 +7,7 @@ import io
 import json
 
 import numpy as np
-from PIL import Image, ImageOps
+from PIL import Image
 
 import mutsume
 
@@ -34,19 +34,19 @@ def do_encode(text, ecc, profile, cell_size, dark_hex, light_hex,
 
     容量超過などで生成できないときは {"ok": False, "error": 説明}（例外は投げない）。
     dark_hex / light_hex で暗いセル・明るいセルの色を指定する。invert=True で
-    生成画像を丸ごと白黒反転する (枠線ごと反転される)。
+    暗色と明色を入れ替える (色相は保ったまま明暗を反転する)。
     grid_lines=False で白セルの枠線を消す。
     """
     try:
         sym = mutsume.encode(text, **_kw(ecc, profile))
     except mutsume.MutsumeError as e:
         return json.dumps({"ok": False, "error": str(e)})
-    img = sym.to_image(cell_size=cell_size, grid_lines=grid_lines,
-                       dark_rgb=_hex(dark_hex), light_rgb=_hex(light_hex))
+    dark, light = _hex(dark_hex), _hex(light_hex)
     if invert:
-        img = ImageOps.invert(img.convert("RGB"))
+        dark, light = light, dark
     buf = io.BytesIO()
-    img.save(buf, "PNG")
+    sym.to_image(cell_size=cell_size, grid_lines=grid_lines,
+                 dark_rgb=dark, light_rgb=light).save(buf, "PNG")
     return json.dumps({
         "ok": True,
         "png": base64.b64encode(buf.getvalue()).decode(),

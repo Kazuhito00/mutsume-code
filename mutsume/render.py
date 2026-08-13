@@ -48,6 +48,16 @@ def _is_dark(rgb: tuple[int, int, int]) -> bool:
     return _luma(rgb) < 128
 
 
+def _order_colors(a, b):
+    """(暗い方, 明るい方) を輝度順に返す。境界線の色決めに使う。
+
+    セパレータ・輪郭を「明るい方 / 暗い方」で描くと、暗色 / 明色を入れ替えても
+    (白黒反転) 線が常にセルと違う明度になり消えない。塗り・背景は指定色を
+    そのまま使うので、反転しても色相は保たれる (赤 → 赤のまま、補色にならない)。
+    """
+    return (a, b) if _luma(a) <= _luma(b) else (b, a)
+
+
 def _edge_color(here: bool, there: bool | None, dark_separator: bool,
                 grid_lines: bool):
     """セル間 (there=None なら外周) の境界線の色。描かないなら None。
@@ -126,6 +136,7 @@ def render_png(
     (黒がベタ塗りに融合せず、1 セルずつ視認できるようになる)。
     """
     ox, oy, width, height = _geometry(symbol, cell_size, quiet_cells)
+    darker, lighter = _order_colors(dark_rgb, light_rgb)
     ss = max(1, supersample)
     img = Image.new("RGB", (width * ss, height * ss), light_rgb)
     draw = ImageDraw.Draw(img)
@@ -144,7 +155,7 @@ def render_png(
     seps, outs = _collect_edges(symbol, verts, dark_separator, grid_lines,
                                 dark_rgb, light_rgb)
     cap = stroke / 2.0
-    for color, segs in ((light_rgb, seps), (dark_rgb, outs)):
+    for color, segs in ((lighter, seps), (darker, outs)):
         for p1, p2 in segs:
             draw.line([p1, p2], fill=color, width=stroke)
             if stroke > 2:  # 角に隙間ができないよう丸キャップを足す
@@ -164,6 +175,7 @@ def render_svg(symbol: Symbol, path: str | None = None, cell_size: float = 18.0,
                dark_rgb: tuple[int, int, int] = DARK,
                light_rgb: tuple[int, int, int] = LIGHT) -> str:
     ox, oy, width, height = _geometry(symbol, cell_size, quiet_cells)
+    darker, lighter = _order_colors(dark_rgb, light_rgb)
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}">',
@@ -180,7 +192,7 @@ def render_svg(symbol: Symbol, path: str | None = None, cell_size: float = 18.0,
 
     seps, outs = _collect_edges(symbol, verts, dark_separator, grid_lines,
                                 dark_rgb, light_rgb)
-    for color, segs in ((light_rgb, seps), (dark_rgb, outs)):
+    for color, segs in ((lighter, seps), (darker, outs)):
         for (x1, y1), (x2, y2) in segs:
             parts.append(f'<line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" '
                          f'y2="{y2:.2f}" stroke="rgb{color}" '
