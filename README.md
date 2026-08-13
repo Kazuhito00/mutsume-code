@@ -7,7 +7,7 @@
 
 ## できること
 
-- マーカープロファイル 3 種: `micro`（最小） / `compact`（標準） / `robust`（射影変換対応）
+- マーカープロファイル 4 種: `nano`（極小・中央ロケータ1個・正対前提） / `micro`（最小） / `compact`（標準） / `robust`（射影変換対応）
 - 文字モード: 数字 / 英数 / バイト。DP で最適セグメント分割
 - Reed-Solomon ブロック分割 + インターリーブ、消失訂正（遮蔽への耐性）
 - 適応的二値化（Sauvola）で照明ムラに対応
@@ -34,8 +34,9 @@ Web カメラデモだけ `opencv-python` を使う。
 # 斜めから撮る前提なら robust プロファイル
 .\venv\Scripts\python.exe -m mutsume encode "..." -o out.png --profile robust
 
-# 小さくしたいなら micro
+# 小さくしたいなら micro、さらに極小なら nano (中央ロケータ 1 個・正対前提)
 .\venv\Scripts\python.exe -m mutsume encode 123456789 -o out.png --profile micro
+.\venv\Scripts\python.exe -m mutsume encode 12345 -o out.png --profile nano
 
 # 読み取り（プロファイル・向き・白黒反転は自動判別）
 .\venv\Scripts\python.exe -m mutsume decode out.png -v

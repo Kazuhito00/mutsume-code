@@ -55,11 +55,16 @@ FORMAT_OFFSETS = (3, 4, 5, -3, -4, -5)
 #            ロケータを一発識別でき、6 点からホモグラフィを解いて射影歪みに対応。
 #   micro  : ロケータ 7 セル x 3 = 21 セルのみ。シグネチャもフォーマットも持たず、
 #            向き・半径・マスクは復号側の総当たり + CRC で決める。Micro QR 相当。
-PROFILES = ("compact", "robust", "micro")
+PROFILES = ("compact", "robust", "micro", "nano")
 DEFAULT_PROFILE = "compact"
 MIN_RADIUS_ROBUST = 9
 MIN_RADIUS_MICRO = 5
 MAX_RADIUS_MICRO = 8  # これ以上は総当たりが割に合わず compact の方が入る
+# nano: 中央ブルズアイ 1 個 (白中心 + 黒リング = 7 セル) だけの最小規格。
+# ロケータが 1 個なので姿勢は相似変換のみ (正対前提)。向きは回転 x 鏡映を総当たり。
+MIN_RADIUS_NANO = 4
+MAX_RADIUS_NANO = 6
+NANO_BULLSEYE = (0, 1)
 
 
 def hex_distance(a: Axial, b: Axial = (0, 0)) -> int:
@@ -180,6 +185,17 @@ def get_layout(radius: int, profile: str = "compact") -> Layout:
     cell_set = set(cells)
     fixed: dict[Axial, int] = {}
 
+    if profile == "nano":
+        # 中央ブルズアイ 1 個だけ。シグネチャ・フォーマットは持たず総当たりで決める。
+        bullseye = _add_disc(fixed, (0, 0), NANO_BULLSEYE, cell_set)
+        data_cells = tuple(c for c in cells if c not in fixed)
+        return Layout(
+            radius=radius, cells=tuple(cells),
+            locator_centers=((0, 0),), locator_cells=tuple(bullseye),
+            signature_cells=(), function_values=fixed,
+            format_positions=(), data_cells=data_cells, profile="nano",
+        )
+
     if profile in ("compact", "micro"):
         # ロケータ = 花形 7 セル (白中心 + 黒リング)。リング R-1 のコーナー 0/2/4。
         ring_of_centers = radius - 1
@@ -266,11 +282,17 @@ def min_radius(profile: str) -> int:
         return MIN_RADIUS_ROBUST
     if profile == "micro":
         return MIN_RADIUS_MICRO
+    if profile == "nano":
+        return MIN_RADIUS_NANO
     return MIN_RADIUS
 
 
 def max_radius(profile: str) -> int:
-    return MAX_RADIUS_MICRO if profile == "micro" else MAX_RADIUS
+    if profile == "micro":
+        return MAX_RADIUS_MICRO
+    if profile == "nano":
+        return MAX_RADIUS_NANO
+    return MAX_RADIUS
 
 
 # --- マスク -------------------------------------------------------------------

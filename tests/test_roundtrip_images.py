@@ -31,6 +31,12 @@ CASES: list[tuple[str, str, dict]] = [
     ("micro_numeric", "123456789", dict(profile="micro")),
     ("micro_alnum", "HELLO", dict(profile="micro")),
     ("micro_byte", "Hi!", dict(profile="micro")),
+    # nano (中央ブルズアイ 1 個・最小規格。相似変換 = 正対前提)
+    ("nano_min", "12", dict(profile="nano")),
+    ("nano_numeric", "12345", dict(profile="nano")),
+    ("nano_alnum", "HELLO", dict(profile="nano")),
+    ("nano_byte", "Hi!", dict(profile="nano")),
+    ("nano_max", "ABCDEFGH", dict(profile="nano")),
     # 文字モード (数字 / 英数 / バイト / 日本語)
     ("mode_numeric", "0123456789" * 4, dict(ecc="M")),
     ("mode_alnum", "ABCDEFGHIJ 0123456789 $%*+-./:", dict(ecc="M")),
