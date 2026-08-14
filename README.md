@@ -1,6 +1,7 @@
 # mutsume-code
 六角格子の 2次元コードの PoC です。<br>
 実用性皆無のジョークアプリのようなものなので、実用性を求める方はQRコードなどご利用ください。<br>
+Python実装ですが、Pyodideを利用したブラウザのデモ（[kazuhito00.github.io/mutsume-code/](https://kazuhito00.github.io/mutsume-code/)）も用意しています。<br>
 
 <img width="41%" alt="image" src="https://github.com/user-attachments/assets/d1e7daab-e805-4750-ab2a-0a675005bde0" />　<img width="52%" alt="image" src="https://github.com/user-attachments/assets/29cb750d-9719-4a2e-9795-b9266d793708" />
 
