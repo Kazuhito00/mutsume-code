@@ -1,59 +1,50 @@
 # mutsume-code
+六角格子の 2次元コードの PoC です。<br>
+実用性皆無のジョークアプリのようなものなので、実用性を求める方はQRコードなどご利用ください。<br>
 
-六角格子の 2 次元コード（エンコーダ / デコーダ）の PoC。
+<img width="41%" alt="image" src="https://github.com/user-attachments/assets/d1e7daab-e805-4750-ab2a-0a675005bde0" />　<img width="52%" alt="image" src="https://github.com/user-attachments/assets/29cb750d-9719-4a2e-9795-b9266d793708" />
 
-蜂の巣状に隣接した六角セル、位置検出マーカー、Reed-Solomon 誤り訂正を備え、
-**画像から回転・拡大縮小・鏡映・せん断・射影歪み・照明ムラを吸収して読み取る**。
+## 想定用途
 
-## できること
-
-- マーカープロファイル 3 種: `micro`（最小） / `compact`（標準） / `robust`（射影変換対応）
-- 文字モード: 数字 / 英数 / バイト。DP で最適セグメント分割
-- Reed-Solomon ブロック分割 + インターリーブ、消失訂正（遮蔽への耐性）
-- 適応的二値化（Sauvola）で照明ムラに対応
-- 1 枚から複数コードを検出、動画では前フレームを追従
-- 白黒反転したコードも読める（`decode(..., allow_inverted=False)` で無効化）
-- 生成時に暗色・明色を指定でき、白黒反転もできる（Web デモ）
-- 画像上の位置・姿勢（`Geometry`）の取得
+- 何か他とは違ったデザインの2次元コードを付与したいとき
+- SF作品の漫画とかゲーム内の世界観を補強する小道具
+- etc
 
 ## セットアップ
 
 ```powershell
-.\venv\Scripts\python.exe -m pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
-依存は `numpy` と `pillow` のみ（Reed-Solomon も画像処理も自前実装）。
-Web カメラデモだけ `opencv-python` を使う。
+依存は `numpy` と `pillow` のみ。<br>
+Web カメラデモを利用する際のみ `opencv-python` を利用。
 
 ## CLI
 
 ```powershell
 # 生成
-.\venv\Scripts\python.exe -m mutsume encode "https://example.com" -o out.png --ecc Q
+python -m mutsume encode "https://example.com" -o out.png --ecc Q
 
 # 斜めから撮る前提なら robust プロファイル
-.\venv\Scripts\python.exe -m mutsume encode "..." -o out.png --profile robust
+python -m mutsume encode "..." -o out.png --profile robust
 
 # 小さくしたいなら micro
-.\venv\Scripts\python.exe -m mutsume encode 123456789 -o out.png --profile micro
+python -m mutsume encode 123456789 -o out.png --profile micro
 
 # 読み取り（プロファイル・向き・白黒反転は自動判別）
-.\venv\Scripts\python.exe -m mutsume decode out.png -v
+python -m mutsume decode out.png -v
 
 # 画像上の位置を出す / 重ね描き画像を書き出す
-.\venv\Scripts\python.exe -m mutsume decode out.png --geometry
-.\venv\Scripts\python.exe -m mutsume decode out.png --overlay overlay.png
+python -m mutsume decode out.png --geometry
+python -m mutsume decode out.png --overlay overlay.png
 
 # サイズ別の容量表
-.\venv\Scripts\python.exe -m mutsume info --mode numeric
+python -m mutsume info --mode numeric
 ```
 
 `-o out.svg` にすると SVG で出力する。
 
 ## Python API
-
-公開 API は **4 関数**だけ。
-
 ```python
 import mutsume
 
@@ -84,13 +75,13 @@ mutsume.capacity(10, mode="numeric")  # -> 数字の桁数
 ## 使用例スクリプト
 
 ```powershell
-.\venv\Scripts\python.exe example_encode.py                    # encode_*.png / .svg を生成
-.\venv\Scripts\python.exe example_decode.py encode_basic.png   # それを読む
+python example_encode.py                    # encode_*.png / .svg を生成
+python example_decode.py encode_basic.png   # それを読む
 
 # カメラ / 動画 / 静止画で読むシンプルなデモ（要 opencv-python）
-.\venv\Scripts\python.exe example_webcam.py                     # カメラ 0 番
-.\venv\Scripts\python.exe example_webcam.py --video path/to/movie.mp4
-.\venv\Scripts\python.exe example_webcam.py --image encode_basic.png
+python example_webcam.py                     # カメラ 0 番
+python example_webcam.py --video path/to/movie.mp4
+python example_webcam.py --image encode_basic.png
 ```
 
 `example_webcam.py` は検出したコードの外形・ファインダ・向きを緑で描き、右上に
@@ -98,30 +89,19 @@ mutsume.capacity(10, mode="numeric")  # -> 数字の桁数
 `--refresh` で全探索の間隔を調整）。`q` / ESC で終了。
 
 ## ブラウザデモ（GitHub Pages）
-
-`web/` に Pyodide ベースのデモがある。生成・画像からの読み取り・カメラ読み取りを
-**すべてブラウザ内（WASM）で実行**する（コアの `mutsume` は無改造。numpy / pillow は
-Pyodide が供給し、カメラは JS 側で取得するので opencv は不要）。
-
-リポジトリの Settings → Pages で Source を「GitHub Actions」にすると、
-`.github/workflows/pages.yml` が `web/` と `mutsume/` を配信する。
+`web/` に Pyodide ベースのデモを用意しています。<br>
+生成・画像からの読み取り・カメラ読み取りをブラウザ内（WASM）で実行する。<bR>
+※コアの `mutsume` は無改造。numpy / pillow はPyodide が供給し、カメラは JS 側で取得するので opencv は不要
 
 ```powershell
 # ローカル確認（web/ と mutsume/ を集めて配信。.js の MIME も正しく返す）
-.\venv\Scripts\python.exe serve_web.py       # http://localhost:8000
+python serve_web.py       # http://localhost:8000
 ```
 
 ## テスト
-
 ```powershell
-.\venv\Scripts\python.exe -m unittest discover -s tests -v
+python -m unittest discover -s tests -v
 ```
-
-Reed-Solomon の誤り / 消失訂正、格子の不変条件、文字モード、カラーパレット、
-全 12 向きの復元、PNG 経由の往復（回転 / 縮小 / ぼかし / JPEG / せん断 / 射影 /
-照明ムラ / 遮蔽）を検証する。`test_roundtrip_images.py` は各プロファイル・
-パレット・文字モード（枠線あり / なしを含む）で往復を検証し、生成した
-PNG / SVG を `tests/generated/` に残す。
 
 ## 構成
 
@@ -144,8 +124,8 @@ web/                  ブラウザ (Pyodide) デモ。GitHub Pages で配信
 .github/workflows/    Pages への自動デプロイ
 ```
 
-## 現状の限界
-
-- 射影歪みは傾き 15% 程度まで（視野角 45 度超は不可）
-- `compact` / `micro` は射影変換に非対応 — 斜め撮影用途なら `robust`
-- カラーはレンダリング画像での検証のみ。実印刷 → 撮影の色再現は未検証
+# Author
+高橋かずひと(https://twitter.com/KzhtTkhs)
+ 
+# License 
+mutsume-code is under [Apache-2.0 License](LICENSE).
