@@ -89,7 +89,9 @@ python example_webcam.py --image encode_basic.png
 `--refresh` で全探索の間隔を調整）。`q` / ESC で終了。
 
 ## ブラウザデモ（GitHub Pages）
-`web/` に Pyodide ベースのデモを用意しています。<br>
+[kazuhito00.github.io/mutsume-code/](https://kazuhito00.github.io/mutsume-code/)
+
+Pyodide ベースのデモを用意しています。<br>
 生成・画像からの読み取り・カメラ読み取りをブラウザ内（WASM）で実行する。<bR>
 ※コアの `mutsume` は無改造。numpy / pillow はPyodide が供給し、カメラは JS 側で取得するので opencv は不要
 
