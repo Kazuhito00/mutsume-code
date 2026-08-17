@@ -183,13 +183,36 @@ function drawOverlay(ctx, results) {
 
 async function decodeFile(file) {
   document.querySelector("#image .result").hidden = false;
-  const bmp = await createImageBitmap(file);
+  // SVG は createImageBitmap が不安定なので img 要素経由でラスタライズする。
+  const isSvg = file.type === "image/svg+xml"
+    || file.name.toLowerCase().endsWith(".svg");
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  try {
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = () => rej(new Error("open failed"));
+      img.src = url;
+    });
+  } catch {
+    URL.revokeObjectURL(url);
+    $("img-info").textContent = "画像を開けませんでした";
+    return;
+  }
+  const w0 = img.naturalWidth || 512;
+  const h0 = img.naturalHeight || 512;
+  // SVG はベクタなので、小さければ復号精度のため拡大してラスタライズする
+  const scale = isSvg
+    ? Math.min(1600, Math.max(600, Math.max(w0, h0))) / Math.max(w0, h0)
+    : Math.min(1, 1200 / w0);
   const canvas = $("img-canvas");
-  const scale = Math.min(1, 1200 / bmp.width);
-  canvas.width = Math.round(bmp.width * scale);
-  canvas.height = Math.round(bmp.height * scale);
+  canvas.width = Math.round(w0 * scale);
+  canvas.height = Math.round(h0 * scale);
   const ctx = canvas.getContext("2d");
-  ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#fff";  // SVG の透過部分に備えて白で塗る
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  URL.revokeObjectURL(url);
   const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const t = performance.now();
   const results = decodeImageData(imgData, { maxSymbols: 4 });
