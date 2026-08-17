@@ -10,6 +10,7 @@ import numpy as np
 from PIL import Image
 
 import mutsume
+from mutsume.render import render_svg
 
 # 動画トラッキング用に前フレームで読めた姿勢を保持する
 _hints = []
@@ -48,9 +49,12 @@ def do_encode(text, ecc, profile, cell_size, dark_hex, light_hex,
     sym.to_image(cell_size=cell_size, grid_lines=grid_lines,
                  dark_separator=dark_separator,
                  dark_rgb=dark, light_rgb=light).save(buf, "PNG")
+    svg = render_svg(sym, cell_size=cell_size, grid_lines=grid_lines,
+                     dark_separator=dark_separator, dark_rgb=dark, light_rgb=light)
     return json.dumps({
         "ok": True,
         "png": base64.b64encode(buf.getvalue()).decode(),
+        "svg": base64.b64encode(svg.encode()).decode(),
         "profile": sym.profile, "palette": sym.palette, "radius": sym.radius,
     })
 

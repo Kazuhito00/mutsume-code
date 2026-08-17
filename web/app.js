@@ -26,6 +26,7 @@ async function boot() {
     setStatus("準備完了", "ready");
     enableUI();
     runCheck();
+    syncEcc();
   } catch (e) {
     console.error(e);
     setStatus("初期化に失敗: " + e.message, "error");
@@ -88,6 +89,9 @@ $("enc-run").addEventListener("click", () => {
   const dl = $("enc-dl");
   dl.href = "data:image/png;base64," + r.png;
   dl.hidden = false;
+  const dlsvg = $("enc-dl-svg");
+  dlsvg.href = "data:image/svg+xml;base64," + r.svg;
+  dlsvg.hidden = false;
 });
 
 // テキスト・設定に応じて生成可否をライブ判定し、不可なら注意文言を出す
@@ -113,6 +117,12 @@ function hideWarn() { $("enc-warn").hidden = true; }
 $("enc-text").addEventListener("input", scheduleCheck);
 ["enc-ecc", "enc-profile"].forEach(
   (id) => $(id).addEventListener("change", runCheck));
+
+function syncEcc() {
+  // micro は ECC 固定なので選べないようにする
+  $("enc-ecc").disabled = $("enc-profile").value === "micro";
+}
+$("enc-profile").addEventListener("change", syncEcc);
 
 // --- 共通デコード ------------------------------------------------------------
 
